@@ -3,15 +3,18 @@
 using namespace std;
 
 class Bohr {
-    map <int, short int> edges;
-    map <int, char> board;
-    // массив индексов бора и массив предков индексов
+    // (vertex, char)[coded into 1 int] -> (son of vertex by char)
+    unordered_map <int, short int> edges;
+    // (parent of vertex, vertex)[coded into 1 int] -> (char of edge between them)
+    unordered_map <int, char> board;
+    // indices of parents of vertices
     vector <int> par;
+    // indices of vertices
     vector <vector <int> > ind;
-    // индекс для пометок терминальных состояний, индекс для пометок новых веток
-    int index, lind;
+    // 'index' - index of the next terminal state, 'lind' - index of the next vertex to be added
+    int index, lind; 
 
-    //добавляем строку в бор
+    //adding string to trie
     void add_str(string &s) {
         if(!s.length())
             return;
@@ -36,12 +39,15 @@ public:
     Bohr(vector <string> &mstr) {
         index = 0;
         lind = 1;
+        // zero index automatically goes to root
         ind.resize(1);
+        // the root is a parent of himself
         par.resize(1, 0);
         for(string s : mstr)
             add_str(s);
     }
 
+    //getters
     int get_ind_size(int i) {
         return ind[i].size();
     }
@@ -66,7 +72,7 @@ public:
     int get_size() {
         return ind.size();
     }
-
+    // coders
     int code_int(int i, int j) const {
         return (i << 15) + j;
     }
@@ -78,13 +84,16 @@ public:
 
 // approved by all approved parts
 class Automate {
+    // u - suffix links, t - terminal suffix links
     vector <int> u, t;
+    // d - transitional function
     unordered_map <int, int> d;
     Bohr *ref;
+    // [current] state [of the automate] - number of some vertex
     int state = 0;
+    // it compresses the results given by terminal[suffix link] function
     vector <vector <int> > super;
 
-    //approved
     int suffix_link(int num) {
         if(u[num] != -1)
             return u[num];
@@ -94,7 +103,6 @@ class Automate {
         return u[num] = func(suffix_link(parent), ref->get_board(parent, num));
     }
 
-    //approved
     int terminal(int num) {
         if(t[num] != -1)
             return t[num];
@@ -107,7 +115,6 @@ class Automate {
         return t[num];
     }
 
-    //approved
     int func(int num, char c) {
         int cod = ref->code(num, c);
         if(d.find(cod) != d.end())
@@ -122,7 +129,7 @@ class Automate {
     }
 
 public:
-    //approved
+
     Automate(Bohr& trie) {
         ref = &trie;
         u.resize(ref->get_size(), -1);
@@ -131,13 +138,17 @@ public:
         u[0] = 0;
     }
 
-    //approved
+    // в русском языке автомат стреляет, поэтому такое название
     vector <int> fire(char c) {
         int cur = func(state, c);
         state = cur;
+        // if super[state] is not empty - then result was received previously
+        // so we don't need to calculate it again
         if(super[state].size())
             return super[state];
         vector <int> list;
+        // jumping over terminal links
+        // first, of course may be not a terminal one, but size of list'll be empty
         while(cur) {
             for(int i : ref->get_ind(cur))
                 list.emplace_back(i);
@@ -149,17 +160,22 @@ public:
 };
 
 int main() {
+    // speed-up
     ios_base::sync_with_stdio(0);
     cin.tie(0);
+
     string s;
     getline(cin, s);
+    //каретка головного мозга
     if(s[s.length() - 1] == '\r')
         s.erase(s.end() - 1);
+
     vector <string> mstr;
     vector <int> ind;
     int cur = -1;
+    // splits text into a words by '?'
     for(int i = 0; i < s.length();) {
-        // новая строка-шаблон
+        // new string for trie
         if(s[i] != '?') {
             cur++;
             mstr.emplace_back("");
@@ -168,7 +184,7 @@ int main() {
                 mstr[cur] += s[i++];
             ind.emplace_back(i - 1);
         }
-        // пропускаем все вопросики и фактически либо заканчиваем слово, либо с следущей итерации начнем новое
+
         while(i < s.length() && s[i] == '?')
             i++;
     }
@@ -183,8 +199,10 @@ int main() {
         return 0;
     }
     mstr.clear();
+
     char c;
     vector <short int> mappy;
+    // determines positions of pattern in the text
     while(cin >> c) {
         vector <int> list = mate.fire(c);
         mappy.emplace_back(0);
@@ -197,6 +215,7 @@ int main() {
         pos++;
     }
 
+    // handles the situation when there are '?' in the end of string
     for(int i = 0; i < mappy.size(); i++) {
         if(mappy[i] == cur + 1 && i + s.length() <= pos)
             cout << i << " ";
