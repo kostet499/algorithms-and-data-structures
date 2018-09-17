@@ -34,17 +34,16 @@ int main() {
     int cur = 0, left = 0, right = 0, emp = size - 1;
     vector <int> zf(size, 0);
     vector <char> cf(size);
-    for(int i = 0; i < size - 1; i++) {
+    for(int i = 0; i < size - 1; i++)
         if(!(cin >> cf[i]))
             return 0;
-        zf[i] = z[i + size + 1];
-    }
+
     int i = 0;
     while(cin >> cf[emp]) {
         zf[emp] = 0;
         cur = i % size;
         if(i <= right)
-            zf[cur] = min(z[i - left], right - left + 1);
+            zf[cur] = min(z[i - left], right - i + 1);
 
         while(zf[cur] < size && cf[(i + zf[cur]) % size] == pattern[zf[cur]])
             zf[cur]++;
