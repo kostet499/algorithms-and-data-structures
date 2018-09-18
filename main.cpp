@@ -36,15 +36,18 @@ void prefix_func(string &s, vector <int> &p) {
 //3
 vector <int> z_to_p(vector <int>& z) {
     vector <int> p(z.size(), 0);
-    for(int i = 0, x = 0; i < z.size(); i++, x = i + z[i] - 1)
+    z[0] = 0;
+    for(int i = 0, x = 0; i < z.size(); i++, x = i + max(z[i] - 1, 0))
         p[x] = max(p[x], z[i]);
+    return p;
 }
 
 //4
 vector <int> p_to_z(vector <int>& p) {
     vector <int> z(p.size(), 0);
-    for(int i = 0, x = 0; i < p.size(); i++, x = i - p[i] + 1)
+    for(int i = 0, x = 0; i < p.size(); i++, x = i - max(p[i] - 1, 0))
         z[x] = max(z[x], p[i]);
+    return z;
 }
 
 // возвращает значение префикс функции для элемента c, если префикс функция элемента до него равна j
