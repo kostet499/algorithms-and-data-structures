@@ -39,6 +39,12 @@ vector <int> z_to_p(vector <int>& z) {
     z[0] = 0;
     for(int i = 0, x = 0; i < z.size(); i++, x = i + max(z[i] - 1, 0))
         p[x] = max(p[x], z[i]);
+    int cur_m = 0;
+    for(int i = p.size() - 1; i > - 1; i--) {
+        cur_m = max(p[i], cur_m);
+        p[i] = cur_m;
+        cur_m--;
+    }
     return p;
 }
 
@@ -80,10 +86,11 @@ string min_lex(vector <int>& p) {
 }
 
 int main() {
-    vector <int> p;
+    vector <int> z;
     int x;
     while(cin >> x && x != -1)
-        p.emplace_back(x);
-    cout << min_lex(p);
+        z.emplace_back(x);
+    z = z_to_p(z);
+    cout << min_lex(z);
     return 0;
 }
