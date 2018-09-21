@@ -6,7 +6,7 @@
 using namespace std;
 
 // Counts zet function of the given string
-void z_function(string &pattern, vector<int> &z_values) {
+void z_function(const string &pattern, vector<int> &z_values) {
     z_values.resize(pattern.length(), 0);
     int left = 0;
     int right = 0;
@@ -27,7 +27,7 @@ void z_function(string &pattern, vector<int> &z_values) {
 }
 
 //Counts prefix function of the given string
-void prefix_func(string &pattern, vector<int> &prefix_values) {
+void prefix_func(const string &pattern, vector<int> &prefix_values) {
     prefix_values.resize(pattern.length(), 0);
     for(int i = 1; i < prefix_values.size(); i++) {
         int j = prefix_values[i - 1];
@@ -43,10 +43,9 @@ void prefix_func(string &pattern, vector<int> &prefix_values) {
 }
 
 // Transforms zet function  to prefix function
-vector<int> z_to_p(vector<int> &z_values) {
+vector<int> z_to_p(const vector<int> &z_values) {
     vector<int> prefix_values(z_values.size(), 0);
-    z_values[0] = 0;
-    for(int i = 0, x = 0; i < z_values.size(); i++) {
+    for(int i = 1, x = 0; i < z_values.size(); i++) {
         x = i + max(z_values[i] - 1, 0);
         prefix_values[x] = max(prefix_values[x], z_values[i]);
     }
@@ -60,7 +59,7 @@ vector<int> z_to_p(vector<int> &z_values) {
 }
 
 // Transforms prefix function to zet function
-vector<int> p_to_z(vector<int> &prefix_values) {
+vector<int> p_to_z(const vector<int> &prefix_values) {
     vector<int> z_values(prefix_values.size(), 0);
     for(int i = 0, x = 0; i < prefix_values.size(); i++) {
         x = i - max(prefix_values[i] - 1, 0);
@@ -70,7 +69,7 @@ vector<int> p_to_z(vector<int> &prefix_values) {
 }
 
 // возвращает значение префикс функции для элемента c, если префикс функция элемента до него равна j
-int local_prefix_func(string &pattern, vector<int> &prefix_values, char c, int last_prefix) {
+int local_prefix_func(const string &pattern, const vector<int> &prefix_values, char c, int last_prefix) {
     while(last_prefix && c != pattern[last_prefix]) {
         last_prefix = prefix_values[last_prefix - 1];
     }
@@ -83,7 +82,7 @@ int local_prefix_func(string &pattern, vector<int> &prefix_values, char c, int l
 }
 
 // Строит лексикографически минимальну строку по заданным значениям префикс фукнции(корректной)
-string min_lex(vector<int> &prefix_values) {
+string min_lex(const vector<int> &prefix_values) {
     if(!prefix_values.size()) {
         return "";
     }
