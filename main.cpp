@@ -54,7 +54,7 @@ public:
         return indices[i].size();
     }
 
-    vector<int>& get_ind(int i) {
+    vector<int> get_ind(int i) {
         return indices[i];
     }
 
@@ -84,79 +84,91 @@ public:
     }
 };
 
-// approved by all approved parts
+
 class Automate {
-    // u - suffix links, t - terminal suffix links
-    vector<int> u, t;
-    // d - transitional function
-    unordered_map<int, int> d;
-    Trie *ref;
+    vector<int> suffix_values;
+    vector<int> terminal_values;
+    // transit - transitional function
+    unordered_map<int, int> transit_table;
+    Trie *trie;
     // [current] state [of the automate] - number of some vertex
     int state = 0;
     // it compresses the results given by terminal[suffix link] function
-    vector<vector<int> > super;
+    vector<vector<int> > compressor;
 
     int suffix_link(int num) {
-        if(u[num] != -1)
-            return u[num];
-        int parent = ref->get_par(num);
-        if(parent == 0)
-            return u[num] = 0;
-        return u[num] = func(suffix_link(parent), ref->get_char_edges(parent, num));
+        if(suffix_values[num] != -1) {
+            return suffix_values[num]; 
+        }
+        int parent = trie->get_par(num);
+        if(!parent) {
+            return suffix_values[num] = 0;
+        }
+        return suffix_values[num] = transit(suffix_link(parent), trie->get_char_edges(parent, num));
     }
 
     int terminal(int num) {
-        if(t[num] != -1)
-            return t[num];
-        if(ref->get_ind_size(suffix_link(num)))
-            t[num] = suffix_link(num);
-        else if(suffix_link(num) == 0)
-            t[num] = 0;
-        else
-            t[num] = terminal(suffix_link(num));
-        return t[num];
+        if(terminal_values[num] != -1) {
+            return terminal_values[num];
+        }
+        if(trie->get_ind_size(suffix_link(num))) {
+            terminal_values[num] = suffix_link(num);
+        }
+        else if(!suffix_link(num)) {
+            terminal_values[num] = 0;
+        }
+        else {
+            terminal_values[num] = terminal(suffix_link(num));
+        }
+        return terminal_values[num];
     }
 
-    int func(int num, char c) {
-        int cod = ref->code(num, c);
-        if(d.find(cod) != d.end())
-            return d[cod];
-        if(ref->get_edge(num, c) != -1)
-            d[cod] = ref->get_edge(num, c);
-        else if(num == 0)
-            d[cod] = 0;
-        else
-            d[cod] = func(suffix_link(num), c);
-        return d[cod];
+    int transit(int num, char c) {
+        int cod = trie->code(num, c);
+        if(transit_table.find(cod) != transit_table.end()) {
+            return transit_table[cod];
+        }
+        if(trie->get_edge(num, c) != -1) {
+            transit_table[cod] = trie->get_edge(num, c);
+        }
+        else if(!num) {
+            transit_table[cod] = 0;
+        }
+        else {
+            transit_table[cod] = transit(suffix_link(num), c);
+        }
+        return transit_table[cod];
     }
 
 public:
 
-    Automate(Trie& trie) {
-        ref = &trie;
-        u.resize(ref->get_size(), -1);
-        t.resize(ref->get_size(), -1);
-        super.resize(ref->get_size());
-        u[0] = 0;
+    Automate(Trie& trie1) {
+        trie = &trie1;
+        suffix_values.resize(trie->get_size(), -1);
+        terminal_values.resize(trie->get_size(), -1);
+        compressor.resize(trie->get_size());
+        suffix_values[0] = 0;
     }
 
     // в русском языке автомат стреляет, поэтому такое название
     vector<int> fire(char c) {
-        int cur = func(state, c);
+        int cur = transit(state, c);
         state = cur;
-        // if super[state] is not empty - then result was received previously
+        // if compressor[state] is not empty - then result was received previously
         // so we don't need to calculate it again
-        if(super[state].size())
-            return super[state];
+        if(!compressor[state].empty()) {
+            return compressor[state];
+        }
         vector<int> list;
         // jumping over terminal links
         // first, of course may be not a terminal one, but size of list'll be empty
         while(cur) {
-            for(int i : ref->get_ind(cur))
+            for(int i : trie->get_ind(cur)) {
                 list.emplace_back(i);
+            }
             cur = terminal(cur);
         }
-        return super[state] = list;
+        return compressor[state] = list;
     }
 
 };
@@ -166,62 +178,66 @@ int main() {
     ios_base::sync_with_stdio(0);
     cin.tie(0);
 
-    string s;
-    getline(cin, s);
+    string text;
+    getline(cin, text);
     //каретка головного мозга
-    if(s[s.length() - 1] == '\r')
-        s.erase(s.end() - 1);
+    if(text[text.length() - 1] == '\r')
+        text.erase(text.end() - 1);
 
-    vector<string> mstr;
-    vector<int> ind;
+    vector<string> pattern_list;
+    // indices[j] is a position of the last symbol of pattern number j in the main-pattern
+    vector<int> indices;
     int cur = -1;
     // splits text into a words by '?'
-    for(int i = 0; i < s.length();) {
+    for(int i = 0; i < text.length();) {
         // new string for trie
-        if(s[i] != '?') {
-            cur++;
-            mstr.emplace_back("");
-            mstr[cur] += s[i++];
-            while(s.length() > i && s[i] != '?')
-                mstr[cur] += s[i++];
-            ind.emplace_back(i - 1);
+        if(text[i] != '?') {
+            ++cur;
+            pattern_list.emplace_back("");
+            pattern_list[cur] += text[i++];
+            while(text.length() > i && text[i] != '?') {
+                pattern_list[cur] += text[i++];
+            }
+            indices.emplace_back(i - 1);
         }
 
-        while(i < s.length() && s[i] == '?') {
+        while(i < text.length() && text[i] == '?') {
             ++i;
         }
     }
 
     int pos = 0;
 
-    Trie bor(mstr);
+    Trie bor(pattern_list);
     Automate mate(bor);
-    if(mstr.size() == 0) {
-        for(int i = 0; i < pos - s.length() + 1; i++)
+    if(pattern_list.size() == 0) {
+        for(int i = 0; i < pos - text.length() + 1; i++)
             cout << i << " ";
         return 0;
     }
-    mstr.clear();
+    pattern_list.clear();
 
     char c;
+    // mappy stores possible positions which main-pattern can begin from
     vector<short int> mappy;
     // determines positions of pattern in the text
     while(cin >> c) {
         vector<int> list = mate.fire(c);
         mappy.emplace_back(0);
         for(int i : list) {
-            int position = pos - ind[i];
+            int position = pos - indices[i];
             if(position < 0)
                 continue;
-            mappy[position]++;
+           ++mappy[position];
         }
-        pos++;
+        ++pos;
     }
 
     // handles the situation when there are '?' in the end of string
     for(int i = 0; i < mappy.size(); i++) {
-        if(mappy[i] == cur + 1 && i + s.length() <= pos)
+        if(mappy[i] == cur + 1 && i + text.length() <= pos) {
             cout << i << " ";
+        }
     }
     return 0;
 }
