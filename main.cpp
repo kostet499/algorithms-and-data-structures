@@ -1,63 +1,65 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <unordered_map>
 
 using namespace std;
 
-class Bohr {
+class Trie {
     // (vertex, char)[coded into 1 int] -> (son of vertex by char)
-    unordered_map <int, short int> edges;
-    // (parent of vertex, vertex)[coded into 1 int] -> (char of edge between them)
-    unordered_map <int, char> board;
-    // indices of parents of vertices
-    vector <int> par;
-    // indices of vertices
-    vector <vector <int> > ind;
-    // 'index' - index of the next terminal state, 'lind' - index of the next vertex to be added
-    int index, lind; 
+    unordered_map<int, int> edges;
+    // (parent, son)[coded into 1 int] -> (char of edge)
+    unordered_map<int, char> char_edges;
+    vector<int> parents;
+    vector<vector<int> > indices;
+    int terminal_index;
+    int last_index;
 
-    //adding string to trie
-    void add_str(string &s) {
-        if(!s.length())
+    void add_str(const string &pattern) {
+        if(!pattern.length()) {
             return;
+        }
         int i = 0;
-        for(char c : s) {
+        for(char c : pattern) {
             int cod = code(i, c);
             if(edges.find(cod) == edges.end()) {
-                edges[cod] = lind;
-                vector <int> k;
-                ind.emplace_back(k);
-                par.emplace_back(i);
-                board[code_int(i, lind)] = c;
-                i = lind++;
+                edges[cod] = last_index;
+                vector<int> k;
+                indices.emplace_back(k);
+                parents.emplace_back(i);
+                char_edges[code_int(i, last_index)] = c;
+                i = last_index++;
             }
-            else
+            else {
                 i = edges[cod];
+            }
         }
-        ind[i].emplace_back(index++);
+        indices[i].emplace_back(terminal_index++);
     }
 
 public:
-    Bohr(vector <string> &mstr) {
-        index = 0;
-        lind = 1;
+    Trie(const vector<string> &pattern_list) {
+        terminal_index = 0;
+        last_index = 1;
         // zero index automatically goes to root
-        ind.resize(1);
+        indices.resize(1);
         // the root is a parent of himself
-        par.resize(1, 0);
-        for(string s : mstr)
-            add_str(s);
+        parents.resize(1, 0);
+        for(const string pattern : pattern_list) {
+            add_str(pattern);
+        }
     }
 
     //getters
     int get_ind_size(int i) {
-        return ind[i].size();
+        return indices[i].size();
     }
 
-    vector <int>& get_ind(int i) {
-        return ind[i];
+    vector<int>& get_ind(int i) {
+        return indices[i];
     }
 
     int get_par(int i) {
-        return par[i];
+        return parents[i];
     }
 
     int get_edge(int i, char c) {
@@ -65,12 +67,12 @@ public:
         return edges.find(cod) == edges.end() ? -1 : edges[cod];
     }
 
-    char get_board(int i, int j) {
-        return board[code_int(i, j)];
+    char get_char_edges(int i, int j) {
+        return char_edges[code_int(i, j)];
     }
 
     int get_size() {
-        return ind.size();
+        return indices.size();
     }
     // coders
     int code_int(int i, int j) const {
@@ -85,14 +87,14 @@ public:
 // approved by all approved parts
 class Automate {
     // u - suffix links, t - terminal suffix links
-    vector <int> u, t;
+    vector<int> u, t;
     // d - transitional function
-    unordered_map <int, int> d;
-    Bohr *ref;
+    unordered_map<int, int> d;
+    Trie *ref;
     // [current] state [of the automate] - number of some vertex
     int state = 0;
     // it compresses the results given by terminal[suffix link] function
-    vector <vector <int> > super;
+    vector<vector<int> > super;
 
     int suffix_link(int num) {
         if(u[num] != -1)
@@ -100,7 +102,7 @@ class Automate {
         int parent = ref->get_par(num);
         if(parent == 0)
             return u[num] = 0;
-        return u[num] = func(suffix_link(parent), ref->get_board(parent, num));
+        return u[num] = func(suffix_link(parent), ref->get_char_edges(parent, num));
     }
 
     int terminal(int num) {
@@ -130,7 +132,7 @@ class Automate {
 
 public:
 
-    Automate(Bohr& trie) {
+    Automate(Trie& trie) {
         ref = &trie;
         u.resize(ref->get_size(), -1);
         t.resize(ref->get_size(), -1);
@@ -139,14 +141,14 @@ public:
     }
 
     // в русском языке автомат стреляет, поэтому такое название
-    vector <int> fire(char c) {
+    vector<int> fire(char c) {
         int cur = func(state, c);
         state = cur;
         // if super[state] is not empty - then result was received previously
         // so we don't need to calculate it again
         if(super[state].size())
             return super[state];
-        vector <int> list;
+        vector<int> list;
         // jumping over terminal links
         // first, of course may be not a terminal one, but size of list'll be empty
         while(cur) {
@@ -170,8 +172,8 @@ int main() {
     if(s[s.length() - 1] == '\r')
         s.erase(s.end() - 1);
 
-    vector <string> mstr;
-    vector <int> ind;
+    vector<string> mstr;
+    vector<int> ind;
     int cur = -1;
     // splits text into a words by '?'
     for(int i = 0; i < s.length();) {
@@ -185,13 +187,14 @@ int main() {
             ind.emplace_back(i - 1);
         }
 
-        while(i < s.length() && s[i] == '?')
-            i++;
+        while(i < s.length() && s[i] == '?') {
+            ++i;
+        }
     }
 
     int pos = 0;
 
-    Bohr bor(mstr);
+    Trie bor(mstr);
     Automate mate(bor);
     if(mstr.size() == 0) {
         for(int i = 0; i < pos - s.length() + 1; i++)
@@ -201,10 +204,10 @@ int main() {
     mstr.clear();
 
     char c;
-    vector <short int> mappy;
+    vector<short int> mappy;
     // determines positions of pattern in the text
     while(cin >> c) {
-        vector <int> list = mate.fire(c);
+        vector<int> list = mate.fire(c);
         mappy.emplace_back(0);
         for(int i : list) {
             int position = pos - ind[i];
