@@ -31,11 +31,14 @@ void prefix_func(string &pattern, vector<int> &prefix_values) {
     prefix_values.resize(pattern.length(), 0);
     for(int i = 1; i < prefix_values.size(); i++) {
         int j = prefix_values[i - 1];
-        while(j && pattern[j] != pattern[i])
-            j = prefix_values[j - 1];
 
-        if(pattern[j] == pattern[i])
+        while(j && pattern[j] != pattern[i]) {
+            j = prefix_values[j - 1];
+        }
+
+        if(pattern[j] == pattern[i]) {
             prefix_values[i] = j + 1;
+        }
     }
 }
 
@@ -68,19 +71,22 @@ vector<int> p_to_z(vector<int> &prefix_values) {
 
 // возвращает значение префикс функции для элемента c, если префикс функция элемента до него равна j
 int local_prefix_func(string &pattern, vector<int> &prefix_values, char c, int last_prefix) {
-    while(last_prefix && c != pattern[last_prefix])
+    while(last_prefix && c != pattern[last_prefix]) {
         last_prefix = prefix_values[last_prefix - 1];
+    }
 
-    if(c == pattern[last_prefix])
+    if(c == pattern[last_prefix]) {
         return last_prefix + 1;
+    }
 
     return 0;
 }
 
 // Строит лексикографически минимальну строку по заданным значениям префикс фукнции(корректной)
 string min_lex(vector<int> &prefix_values) {
-    if(!prefix_values.size())
+    if(!prefix_values.size()) {
         return "";
+    }
     string minimal_string = "a";
     for(int i = 1; i < prefix_values.size(); i++) {
         for(int j = 0; j < 26; j++) {
@@ -97,8 +103,9 @@ string min_lex(vector<int> &prefix_values) {
 int main() {
     vector<int> z_values;
     int x;
-    while(cin >> x && x != -1)
+    while(cin >> x && x != -1) {
         z_values.emplace_back(x);
+    }
     z_values = z_to_p(z_values);
     cout << min_lex(z_values);
     return 0;
