@@ -185,6 +185,30 @@ int SuffixArray::index_char(char c) const {
 }
 
 int main() {
+    string str;
+    std::cin >> str;
+    str += '#';
+    SuffixArray mysuf(str);
 
+    int answer = 0;
+    int previos = -1;
+    int actual_size = str.size() - 1;
+    for(auto j : *mysuf.get_sorted_suffix()) {
+        if(j >= actual_size) {
+            continue;
+        }
+        //cout << j << endl;
+        answer += actual_size - j;
+        if(previos != -1) {
+            answer -= mysuf.lcp(j, previos);
+            //cout << mysuf.lcp(j, previos) << " ";
+            previos = j;
+        }
+        else {
+            previos = j;
+        }
+    }
+
+    cout << answer;
     return 0;
 }
