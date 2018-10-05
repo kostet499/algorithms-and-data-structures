@@ -14,10 +14,11 @@ public:
 
 private:
     vector<int> sorted_suffix;
-    vector<int> classes_equal;
+    vector<vector<int> > classes_equal;
     string work_string;
     int char_size;
     int classes_number;
+    int class_index;
 
     char symbol_to_fill;
 
@@ -57,7 +58,6 @@ SuffixArray::SuffixArray(string &build_string) {
     make_work_string(build_string);
     // 256 classes because of 1-byte char
     char_size = 256;
-    classes_equal.resize(work_string.length(), 0);
     sorted_suffix.resize(work_string.length(), 0);
     make_sorted_first();
     make_sorted_finish();
@@ -66,18 +66,26 @@ SuffixArray::SuffixArray(string &build_string) {
 void SuffixArray::make_work_string(string &build_string) {
     int len = build_string.length();
     int new_len = 1;
+    unsigned int power2 = 1;
     while(new_len < len) {
         new_len <<= 1;
+        ++power2;
     }
+
     work_string = build_string;
     for(int i = 0; i < new_len - len; i++) {
         work_string += symbol_to_fill;
+    }
+
+    classes_equal.resize(power2);
+    for(int i = 0; i < power2; i++) {
+        classes_equal[i].resize(new_len, -1);
     }
 }
 
 void SuffixArray::make_sorted_first() {
     vector<int> classes_symbol(char_size, 0);
-
+    class_index = 0;
     // we even don't need to sort symbols, encoding does it for us
     for(auto c : work_string) {
         ++classes_symbol[index_char(c)];
@@ -93,13 +101,13 @@ void SuffixArray::make_sorted_first() {
 
     // giving initial classes to the positions
     int current_class = 0;
-    classes_equal[0] = current_class;
+    classes_equal[class_index][sorted_suffix[0]] = current_class;
     for(int i = 1; i < sorted_suffix.size(); i++) {
         if(index_char(work_string[sorted_suffix[i]]) == index_char(work_string[sorted_suffix[i - 1]])) {
-            classes_equal[sorted_suffix[i]] = current_class;
+            classes_equal[class_index][sorted_suffix[i]] = current_class;
         }
         else {
-            classes_equal[sorted_suffix[i]] = ++current_class;
+            classes_equal[class_index][sorted_suffix[i]] = ++current_class;
         }
     }
     classes_number = current_class + 1;
@@ -115,7 +123,7 @@ void SuffixArray::sort_group(int step) {
     vector<int> group(sorted_suffix.size(), -1);
 
     vector<int> classes(classes_number, 0);
-    for(auto j : classes_equal) {
+    for(auto j : classes_equal[class_index]) {
         ++classes[j];
     }
 
@@ -125,28 +133,28 @@ void SuffixArray::sort_group(int step) {
 
     for(int i = sorted_suffix.size() - 1; i > - 1; i--) {
         int prev = step_left(sorted_suffix[i], step);
-        group[--classes[classes_equal[prev]]] = prev;
+        group[--classes[classes_equal[class_index][prev]]] = prev;
     }
 
-    vector<int> new_classes_equal(sorted_suffix.size(), 0);
     int new_classes_number = 1;
-    int old_class1 = classes_equal[group[0]];
-    int old_class2 = classes_equal[step_right(group[0], step)];
+    int old_class1 = classes_equal[class_index][group[0]];
+    int old_class2 = classes_equal[class_index][step_right(group[0], step)];
+    classes_equal[class_index + 1][group[0]] = 0;
     for(int i = 1; i < group.size(); i++) {
-        int class1 = classes_equal[group[i]];
-        int class2 = classes_equal[step_right(group[i], step)];
+        int class1 = classes_equal[class_index][group[i]];
+        int class2 = classes_equal[class_index][step_right(group[i], step)];
         if(class1 == old_class1 && class2 == old_class2) {
-            new_classes_equal[group[i]] = new_classes_number - 1;
+            classes_equal[class_index + 1][group[i]] = new_classes_number - 1;
         }
         else {
-            new_classes_equal[group[i]] = new_classes_number;
+            classes_equal[class_index + 1][group[i]] = new_classes_number;
             ++new_classes_number;
         }
         old_class1 = class1;
         old_class2 = class2;
     }
     sorted_suffix = group;
-    classes_equal = new_classes_equal;
+    ++class_index;
     classes_number = new_classes_number;
 }
 
@@ -156,6 +164,10 @@ int SuffixArray::index_char(char c) const {
 }
 
 int main() {
-
+    string s = "bbaaac";
+    SuffixArray suf(s);
+    for(auto j : *suf.get_sorted_suffix()) {
+        std::cout << j << " ";
+    }
     return 0;
 }
