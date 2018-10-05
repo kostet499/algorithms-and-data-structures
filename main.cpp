@@ -3,6 +3,8 @@
 
 using std::vector;
 using std::string;
+using std::cout;
+using std::endl;
 
 class SuffixArray {
 public:
@@ -12,6 +14,9 @@ public:
         return &sorted_suffix;
     }
 
+    // least common prefix
+    int lcp(int, int);
+
 private:
     vector<int> sorted_suffix;
     vector<vector<int> > classes_equal;
@@ -19,6 +24,7 @@ private:
     int char_size;
     int classes_number;
     int class_index;
+    int power2;
 
     char symbol_to_fill;
 
@@ -32,9 +38,9 @@ private:
 
     void sort_group(int);
 
-    int step_left(int index, int step) const;
+    int step_left(int, int) const;
 
-    int step_right(int index, int step) const;
+    int step_right(int, int) const;
 };
 
 int SuffixArray::step_left(int index, int step) const {
@@ -66,7 +72,7 @@ SuffixArray::SuffixArray(string &build_string) {
 void SuffixArray::make_work_string(string &build_string) {
     int len = build_string.length();
     int new_len = 1;
-    unsigned int power2 = 1;
+    power2 = 0;
     while(new_len < len) {
         new_len <<= 1;
         ++power2;
@@ -77,8 +83,8 @@ void SuffixArray::make_work_string(string &build_string) {
         work_string += symbol_to_fill;
     }
 
-    classes_equal.resize(power2);
-    for(int i = 0; i < power2; i++) {
+    classes_equal.resize(power2 + 1);
+    for(int i = 0; i < power2 + 1; i++) {
         classes_equal[i].resize(new_len, -1);
     }
 }
@@ -158,16 +164,27 @@ void SuffixArray::sort_group(int step) {
     classes_number = new_classes_number;
 }
 
+int SuffixArray::lcp(int fst, int scd) {
+    int check_class = power2;
+    int answer = 0;
+    while(check_class > -1) {
+        if(classes_equal[check_class][fst] == classes_equal[check_class][scd]) {
+            int step = 1 << check_class;
+            answer += step;
+            fst = step_right(fst, step);
+            scd = step_right(scd, step);
+        }
+        --check_class;
+    }
+    return answer;
+}
+
 // function to give indices to the symbols
 int SuffixArray::index_char(char c) const {
     return static_cast<int>(c);
 }
 
 int main() {
-    string s = "bbaaac";
-    SuffixArray suf(s);
-    for(auto j : *suf.get_sorted_suffix()) {
-        std::cout << j << " ";
-    }
+
     return 0;
 }
