@@ -213,9 +213,9 @@ bool less(string &a, string &b, int a_pos, int b_pos) {
 };
 
 int main() {
-    //std::ios_base::sync_with_stdio(0);
-    //cin.tie(0);
-    //cout.tie(0);
+    std::ios_base::sync_with_stdio(0);
+    cin.tie(0);
+    cout.tie(0);
 
     string a = "";
     string b = "";
@@ -225,20 +225,37 @@ int main() {
     cin >> b;
     cin >> k;
 
-    SuffixArray a_suf(a, '.');
-    SuffixArray b_suf(b, '!');
-    string concat = a_suf.get_work_string() + '?' + b_suf.get_work_string() + "#";
+    string concat = a + '?' + b + "#";
     SuffixArray conc(concat, '#');
+
+    int a_end_size = a.length() + 1;
+    int b_end_size = conc.real_size() - a.length() - 1;
+
+    vector <int> a_suf(a_end_size);
+    vector <int> b_suf(b_end_size);
+    int index_a = 0;
+    int index_b = 0;
+    for(int i = 0; i < conc.real_size(); i++) {
+        int current = *(conc.get_sorted_suffix() + i);
+        if(current < a_end_size) {
+            a_suf[index_a] = i;
+            ++index_a;
+        }
+        else {
+            b_suf[index_b] = i;
+            ++index_b;
+        }
+    }
 
     int a_indicator = 0;
     int b_indicator = 0;
     long long lexical_position = 0;
     int previous = 0;
 
-    while(a_indicator < a_suf.real_size() && b_indicator < b_suf.real_size()) {
-        int sufa = *(a_suf.get_sorted_suffix() + a_indicator);
-        int sufb = *(b_suf.get_sorted_suffix() + b_indicator);
-        int equal_part = conc.lcp(sufa, a_suf.get_work_string().size() + 1 + sufb);
+    while(a_indicator < a_end_size && b_indicator < b_end_size) {
+        int sufa = *(conc.get_sorted_suffix() + a_suf[a_indicator]);
+        int sufb = *(conc.get_sorted_suffix() + b_suf[b_indicator]);
+        int equal_part = conc.lcp(sufa, sufb);
 
         if(equal_part > previous) {
             long long new_lex_pos = lexical_position + equal_part - previous;
@@ -256,16 +273,16 @@ int main() {
             }
         }
 
-        if(less(a, b, sufa + equal_part, sufb + equal_part)) {
+        if(less(a, b, sufa + equal_part, sufb + equal_part - a.length() - 1)) {
             ++a_indicator;
-            if(a_indicator < a_suf.real_size()) {
-                previous = std::min(previous, a_suf.lcp(sufa, *(a_suf.get_sorted_suffix() + a_indicator)));
+            if(a_indicator < a_end_size) {
+                previous = std::min(previous, conc.lcp(sufa, *(conc.get_sorted_suffix() + a_suf[a_indicator])));
             }
         }
         else {
             ++b_indicator;
-            if(b_indicator < b_suf.real_size()) {
-                previous = std::min(previous, b_suf.lcp(sufb, *(b_suf.get_sorted_suffix() + b_indicator)));
+            if(b_indicator < b_end_size) {
+                previous = std::min(previous, conc.lcp(sufb, *(conc.get_sorted_suffix() + b_suf[b_indicator])));
             }
         }
     }
