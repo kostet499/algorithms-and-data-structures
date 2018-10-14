@@ -110,6 +110,16 @@ private:
                 }
                 else {
                     vertex_number = vertices[suffix_link].child[symbol];
+                    vertex *current = &vertices[vertex_number];
+                    int difference = current->right - current->left;
+                    while(len > difference) {
+                        symbol = work_string[suffix + difference];
+                        assert(current->child.find(symbol) != current->child.end());
+                        vertex_number = current->child[symbol];
+                        current = &vertices[vertex_number];
+                        difference += current->right - current->left;
+                    }
+                    len -= difference - current->right + current->left;
                 }
             }
 
