@@ -90,7 +90,7 @@ private:
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
             // experimental decent
             size_t vertex_number = 0;
-            if(true || suffix_link == 0) {
+            if(suffix_link == 0) {
                 len = phase - suffix;
                 vertex *current = &vertices[vertex_number];
                 int difference = current->right - current->left;
@@ -105,7 +105,7 @@ private:
             }
             else {
                 // suppose len stays the same
-                vertex_number = vertices[suffix].child[symbol];
+                vertex_number = vertices[suffix_link].child[symbol];
             }
 
             vertex *current = &vertices[vertex_number];
