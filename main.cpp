@@ -104,32 +104,29 @@ private:
                 len -= difference - current->right + current->left;
             }
             else {
-                // suppose len stays the same
-                vertex_number = vertices[suffix_link].child[symbol];
-                vertex *current = &vertices[vertex_number];
-                int difference = current->right - current->left;
-                while(len > difference) {
-                    symbol = work_string[suffix + difference];
-                    assert(current->child.find(symbol) != current->child.end());
-                    vertex_number = current->child[symbol];
-                    current = &vertices[vertex_number];
-                    difference += current->right - current->left;
+                if(len == -1) {
+                    vertex_number = suffix_link;
+                    len = vertices[vertex_number].right - vertices[vertex_number].left;
                 }
-                len -= difference - current->right + current->left;
+                else {
+                    vertex_number = vertices[suffix_link].child[symbol];
+                }
             }
 
             vertex *current = &vertices[vertex_number];
 
-            // come to the end of the edge
-            if(vertex_number == 0 || current->left + len == current->right) {
+            // internal vertex handle
+            if(current->left + len == current->right) {
                 if(current->child.find(c) == current->child.end()) {
                     if(previous_internal != 0) {
                         vertices[previous_internal].link = vertex_number;
+                        previous_internal = 0;
                     }
-                    previous_internal = vertex_number;
                     current->child[c] = vertices_count;
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
+                    suffix_link = vertices[vertex_number].link;
+                    len = -1;
                 }
                 else {
                     return suffix;
@@ -154,13 +151,12 @@ private:
                     vertices.emplace_back(vertex(phase, work_string.size(), vertices_count - 1, 0));
                     vertices[vertices_count - 1].child[c] = vertices_count;
                     ++vertices_count;
+                    suffix_link = vertices[vertices[previous_internal].parent].link;
                 }
                 else {
                     return suffix;
                 }
             }
-
-            suffix_link = vertices[vertices[previous_internal].parent].link;
         }
         return phase + 1;
     }
