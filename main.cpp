@@ -82,16 +82,20 @@ private:
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
             // experimental decent
             size_t vertex_number = 0;
-            if(suffix_link == 0) {
-                int right = vertices[suffix_link].right;
-                // position on edge to last vertex
-                int len = 0;
-                vertex_number = suffix_link;
-                while (right < phase) {
-                    char symbol = work_string[right];
-                    vertex_number = vertices[vertex_number].child[symbol];
-                    len = phase - right;
-                    right = vertices[vertex_number].right;
+            int len = phase - suffix;
+            if(true || suffix_link == 0) {
+                vertex *current = &vertices[vertex_number];
+                int difference = current->right - current->left;
+                while(len > difference) {
+                    vertex_number = current->child[work_string[suffix + difference]];
+                    current = &vertices[vertex_number];
+                    difference += current->right - current->left;
+                }
+                if(len != difference) {
+                    len -= difference - current->right + current->left;
+                }
+                else {
+                    len = 0;
                 }
             }
             else {
@@ -125,6 +129,7 @@ private:
                     // new internal vertex with number "vertices_count"
                     vertices.emplace_back(vertex(current->left, current->left + len, current->parent, 0));
                     current = &vertices[vertex_number];
+                    vertices[vertices_count].child[work_string[current->left + len]] = vertex_number;
                     vertices[current->parent].child[work_string[current->left]] = vertices_count;
                     current->parent = vertices_count;
                     current->left += len;
@@ -142,6 +147,7 @@ private:
 
             suffix_link = vertices[vertices[vertex_number].parent].link;
         }
+        return phase + 1;
     }
 };
 
