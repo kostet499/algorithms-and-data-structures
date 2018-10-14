@@ -47,11 +47,11 @@ public:
                 if(current->left >= fst) {
                     cout << 1 << " " << current->left - fst << " " << current->right - fst << endl;
                 }
-                // 0 string
+                    // 0 string
                 else if(current->right > fst){
                     cout << 0 << " " << current->left << " " << current->right - scd << endl;
                 }
-                // hmm, 0 string
+                    // hmm, 0 string
                 else {
                     cout << 0 << " " << current->left << " " << current->right << endl;
                 }
@@ -106,6 +106,16 @@ private:
             else {
                 // suppose len stays the same
                 vertex_number = vertices[suffix_link].child[symbol];
+                vertex *current = &vertices[vertex_number];
+                int difference = current->right - current->left;
+                while(len > difference) {
+                    symbol = work_string[suffix + difference];
+                    assert(current->child.find(symbol) != current->child.end());
+                    vertex_number = current->child[symbol];
+                    current = &vertices[vertex_number];
+                    difference += current->right - current->left;
+                }
+                len -= difference - current->right + current->left;
             }
 
             vertex *current = &vertices[vertex_number];
@@ -148,10 +158,9 @@ private:
                 else {
                     return suffix;
                 }
-
             }
 
-            suffix_link = vertices[vertices[vertex_number].parent].link;
+            suffix_link = vertices[vertices[previous_internal].parent].link;
         }
         return phase + 1;
     }
