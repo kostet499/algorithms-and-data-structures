@@ -36,34 +36,40 @@ public:
         }
     }
 
-    void dfs(size_t ver, int &number, size_t string_size, size_t valid_parent, bool to_print) {
+    void dfs(size_t ver, size_t &number, size_t fst, size_t scd, size_t parent, bool to_print) {
         vertex *current = &vertices[ver];
         if(ver != 0) {
             ++number;
-            valid_parent = static_cast<size_t>(number);
             if(to_print) {
                 // to fix
-                cout << current->parent << " ";
-                if(current->right < string_size) {
-                    cout << 1 << " " << current->left << " " << current->right << endl;
+                cout << parent << " ";
+                // 1 string
+                if(current->left > fst) {
+                    cout << 1 << " " << current->left - fst << " " << current->right - fst << endl;
                 }
+                // 0 string
+                else if(current->right > fst){
+                    cout << 0 << " " << current->left << " " << current->right - scd << endl;
+                }
+                // hmm, 1 and 0 suffix
                 else {
-                    cout << 0 << " " << current->left << " " << current->right - string_size << endl;
+                    cout << 0 << " " << current->left << " " << current->right << endl;
                 }
             }
         }
 
-        if(current->child.find('$') != current->child.end()) {
-            dfs(current->child['$'], number, string_size, valid_parent, to_print);
+        parent = number;
+        if(current->child.find('#') != current->child.end()) {
+            dfs(current->child['#'], number, fst, scd, parent, to_print);
         }
 
-        if(current->child.find('#') != current->child.end()) {
-            dfs(current->child['#'], number, string_size, valid_parent, to_print);
+        if(current->child.find('$') != current->child.end()) {
+            dfs(current->child['$'], number, fst, scd, parent, to_print);
         }
 
         for(char i = 'a'; i <= 'z'; ++i) {
             if(current->child.find(i) != current->child.end()) {
-                dfs(current->child[i], number, string_size, valid_parent, to_print);
+                dfs(current->child[i], number, fst, scd, parent, to_print);
             }
         }
     }
@@ -158,10 +164,10 @@ int main() {
     string concat = s + t;
     SuffixTree mysuf(concat);
     mysuf.build_tree();
-    int number = 0;
-    mysuf.dfs(0, number, t.size(), 0, false);
+    size_t number = 0;
+    mysuf.dfs(0, number, s.size(), t.size(), number, false);
     cout << number + 1 << endl;
     number = 0;
-    mysuf.dfs(0, number, t.size(), 0, true);
+    mysuf.dfs(0, number, s.size(), t.size(), number, true);
     return 0;
 }
