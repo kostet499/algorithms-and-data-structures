@@ -3,14 +3,12 @@ using namespace std;
 
 struct vertex {
     unordered_map <char, size_t> child;
-    size_t number;
     int left;
     int right;
     size_t parent;
     size_t link;
 
-    vertex(size_t num, int l, int r, size_t p, size_t lin) {
-        number = num;
+    vertex(int l, int r, size_t p, size_t lin) {
         left = l;
         right = r;
         parent = p;
@@ -23,7 +21,7 @@ public:
     SuffixTree(string &built_string) {
         work_string = built_string;
         size = built_string.size();
-        vertices.emplace_back(vertex(0, 0, 0, 0, 0));
+        vertices.emplace_back(vertex(0, 0, 0, 0));
         vertices_count = 1;
     }
 
@@ -32,24 +30,25 @@ public:
     }
 
     void build_tree() {
+        size_t previous = 0;
         for(size_t i = 0; i < size; ++i) {
-            make_phase(i);
+            previous = make_phase(i, previous);
         }
     }
 
     void dfs(size_t ver, int &number, size_t string_size, size_t valid_parent, bool to_print) {
         vertex *current = &vertices[ver];
-        if(!(ver == 0 || (current->left < string_size && current->right > string_size))) {
+        if(ver != 0) {
             ++number;
-            valid_parent = number;
+            valid_parent = static_cast<size_t>(number);
             if(to_print) {
                 // to fix
                 cout << current->parent << " ";
-                if(current->left < string_size) {
-                    cout << 0 << " " << current->left << " " << current->right << endl;
+                if(current->right < string_size) {
+                    cout << 1 << " " << current->left << " " << current->right << endl;
                 }
                 else {
-                    cout << 1 << " " << current->left - string_size << " " << current->right - string_size << endl;
+                    cout << 0 << " " << current->left << " " << current->right - string_size << endl;
                 }
             }
         }
@@ -72,57 +71,76 @@ public:
 private:
     string work_string;
     vector<vertex> vertices;
-    vector<pair <size_t, int> > stop_point;
     size_t size;
     size_t vertices_count;
 
-    void make_phase(size_t phase) {
-        stop_point.emplace_back(make_pair(0, 0));
+    size_t make_phase(size_t phase, size_t iterations_begin) {
         char c = work_string[phase];
 
-        for(size_t suffix = 0; suffix <= phase; ++suffix) {
-            size_t vertex_number = stop_point[suffix].first;
-            int edge_position = stop_point[suffix].second;
-            vertex *current = &vertices[vertex_number];
-
-            // 1 case
-            if(vertex_number && current->child.empty() && edge_position == current->right - current->left) {
-                // seems to be useless
-                ++stop_point[suffix].second;
-                ++current->right;
-            }
-            else if(edge_position == current->right - current->left) {
-                if(current->child.find(c) == current->child.end()) {
-                    stop_point[suffix] = make_pair(vertices_count, 1);
-                    vertices.emplace_back(vertex(vertices_count, phase, phase + 1, vertex_number, 0));
-                    // we cant use pointer here, because vector can change his size (and memory location)
-                    vertices[vertex_number].child[c] = vertices_count;
-                    ++vertices_count;
-                }
-                else {
-                    stop_point[suffix] = make_pair(current->child[c], 1);
+        size_t suffix_link = 0;
+        size_t previous_internal = 0;
+        for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
+            // experimental decent
+            size_t vertex_number = 0;
+            if(suffix_link == 0) {
+                int right = vertices[suffix_link].right;
+                // position on edge to last vertex
+                int len = 0;
+                vertex_number = suffix_link;
+                while (right < phase) {
+                    char symbol = work_string[right];
+                    vertex_number = vertices[vertex_number].child[symbol];
+                    len = phase - right;
+                    right = vertices[vertex_number].right;
                 }
             }
             else {
-                if(c == work_string[current->left + edge_position]) {
-                    ++stop_point[suffix].second;
+
+            }
+
+            vertex *current = &vertices[vertex_number];
+
+            // come to the end of the edge
+            if(current->left + len == current->right) {
+                if(current->child.find(c) == current->child.end()) {
+                    if(previous_internal != 0) {
+                        vertices[previous_internal].link = vertex_number;
+                    }
+                    previous_internal = vertex_number;
+                    current->child[c] = vertices_count;
+                    vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
+                    ++vertices_count;
                 }
-                // experimental split
                 else {
-                    // extra vertex that splits edge
-                    vertices.emplace_back(vertex(vertices_count, current->left, current->left + edge_position, current->parent, 0));
+                    return suffix;
+                }
+            }
+            else {
+                // experimental split
+                if(work_string[current->left + len] != c) {
+                    if(previous_internal != 0) {
+                        vertices[previous_internal].link = vertices_count;
+                    }
+                    previous_internal = vertices_count;
+                    // new internal vertex with number "vertices_count"
+                    vertices.emplace_back(vertex(current->left, current->left + len, current->parent, 0));
                     current = &vertices[vertex_number];
                     vertices[current->parent].child[work_string[current->left]] = vertices_count;
                     current->parent = vertices_count;
-                    current->left += edge_position;
+                    current->left += len;
                     ++vertices_count;
                     // new leaf vertex
-                    vertices.emplace_back(vertex(vertices_count, phase, phase + 1, vertices_count - 1, 0));
+                    vertices.emplace_back(vertex(phase, work_string.size(), vertices_count - 1, 0));
                     vertices[vertices_count - 1].child[c] = vertices_count;
-                    stop_point[suffix] = make_pair(vertices_count, 1);
                     ++vertices_count;
                 }
+                else {
+                    return suffix;
+                }
+
             }
+
+            suffix_link = vertices[vertices[vertex_number].parent].link;
         }
     }
 };
@@ -135,9 +153,9 @@ int main() {
     SuffixTree mysuf(concat);
     mysuf.build_tree();
     int number = 0;
-    mysuf.dfs(0, number, s.size(), 0, false);
-    cout << number << endl;
+    mysuf.dfs(0, number, t.size(), 0, false);
+    cout << number + 1 << endl;
     number = 0;
-    mysuf.dfs(0, number, s.size(), 0, true);
+    mysuf.dfs(0, number, t.size(), 0, true);
     return 0;
 }
