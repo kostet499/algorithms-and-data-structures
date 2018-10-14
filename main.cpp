@@ -37,7 +37,7 @@ public:
     }
 
     void dfs(size_t ver, size_t &number, size_t fst, size_t scd, size_t parent, bool to_print) {
-        vertex *current = &vertices[ver];
+         vertex *current = &vertices[ver];
         if(ver != 0) {
             ++number;
             if(to_print) {
@@ -85,23 +85,27 @@ private:
 
         size_t suffix_link = 0;
         size_t previous_internal = 0;
+        int len = 0;
+        char symbol;
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
             // experimental decent
             size_t vertex_number = 0;
-            int len = phase - suffix;
-            if(true || suffix_link == 0) {
+            if(suffix_link == 0) {
+                len = phase - suffix;
                 vertex *current = &vertices[vertex_number];
                 int difference = current->right - current->left;
                 while(len > difference) {
                     assert(current->child.find(work_string[suffix + difference]) != current->child.end());
-                    vertex_number = current->child[work_string[suffix + difference]];
+                    symbol = work_string[suffix + difference];
+                    vertex_number = current->child[symbol];
                     current = &vertices[vertex_number];
                     difference += current->right - current->left;
                 }
                 len -= difference - current->right + current->left;
             }
             else {
-
+                // suppose len stays the same
+                vertex_number = vertices[suffix].child[symbol];
             }
 
             vertex *current = &vertices[vertex_number];
