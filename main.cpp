@@ -51,7 +51,7 @@ public:
                 else if(current->right > fst){
                     cout << 0 << " " << current->left << " " << current->right - scd << endl;
                 }
-                // hmm, 1 and 0 suffix
+                // hmm, 0 string
                 else {
                     cout << 0 << " " << current->left << " " << current->right << endl;
                 }
@@ -93,16 +93,12 @@ private:
                 vertex *current = &vertices[vertex_number];
                 int difference = current->right - current->left;
                 while(len > difference) {
+                    assert(current->child.find(work_string[suffix + difference]) != current->child.end());
                     vertex_number = current->child[work_string[suffix + difference]];
                     current = &vertices[vertex_number];
                     difference += current->right - current->left;
                 }
-                if(len != difference) {
-                    len -= difference - current->right + current->left;
-                }
-                else {
-                    len = 0;
-                }
+                len -= difference - current->right + current->left;
             }
             else {
 
@@ -111,7 +107,7 @@ private:
             vertex *current = &vertices[vertex_number];
 
             // come to the end of the edge
-            if(current->left + len == current->right) {
+            if(vertex_number == 0 || current->left + len == current->right) {
                 if(current->child.find(c) == current->child.end()) {
                     if(previous_internal != 0) {
                         vertices[previous_internal].link = vertex_number;
