@@ -74,6 +74,15 @@ public:
         }
     }
 
+    // test functions
+    void show_internal_links() {
+        int i = 0;
+        for(auto vert : vertices) {
+            cout << i << " " << vert.link << endl;
+            ++i;
+        }
+    }
+
 private:
     string work_string;
     vector<vertex> vertices;
@@ -104,23 +113,17 @@ private:
                 len -= difference - current->right + current->left;
             }
             else {
-                if(len == -1) {
-                    vertex_number = suffix_link;
-                    len = vertices[vertex_number].right - vertices[vertex_number].left;
+                vertex *current = &vertices[suffix_link];
+                len += current->right - current->left;
+                int difference = current->right - current->left;
+                while(len > difference) {
+                    symbol = work_string[suffix + difference];
+                    assert(current->child.find(symbol) != current->child.end());
+                    vertex_number = current->child[symbol];
+                    current = &vertices[vertex_number];
+                    difference += current->right - current->left;
                 }
-                else {
-                    vertex_number = vertices[suffix_link].child[symbol];
-                    vertex *current = &vertices[vertex_number];
-                    int difference = current->right - current->left;
-                    while(len > difference) {
-                        symbol = work_string[suffix + difference];
-                        assert(current->child.find(symbol) != current->child.end());
-                        vertex_number = current->child[symbol];
-                        current = &vertices[vertex_number];
-                        difference += current->right - current->left;
-                    }
-                    len -= difference - current->right + current->left;
-                }
+                len -= difference - current->right + current->left;
             }
 
             vertex *current = &vertices[vertex_number];
@@ -136,9 +139,13 @@ private:
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
                     suffix_link = vertices[vertex_number].link;
-                    len = -1;
+                    len = 0;
                 }
                 else {
+                    if(previous_internal != 0) {
+                        vertices[previous_internal].link = vertex_number;
+                        previous_internal = 0;
+                    }
                     return suffix;
                 }
             }
@@ -186,6 +193,7 @@ int main() {
     mysuf.dfs(0, number, s.size(), t.size(), number, false);
     cout << number + 1 << endl;
     number = 0;
-    mysuf.dfs(0, number, s.size(), t.size(), number, true);
+    //mysuf.dfs(0, number, s.size(), t.size(), number, true);
+    mysuf.show_internal_links();
     return 0;
 }
