@@ -105,6 +105,8 @@ private:
         // position on current edge
         int len = 0;
 
+        // exp
+        size_t internal = iterations_begin;
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
             //suffix_link = 0;
             // we are in the root, so distance from root to root is 0, len is to be counted
@@ -129,31 +131,29 @@ private:
 
             // internal vertex handle
             if(len == current->len()) {
+                if(previous_internal != 0 && suffix == internal) {
+                    vertices[previous_internal].link = vertex_number;
+                    previous_internal = 0;
+                }
                 if(current->child.find(c) == current->child.end()) {
-                    if(previous_internal != 0) {
-                        vertices[previous_internal].link = vertex_number;
-                        previous_internal = 0;
-                    }
                     current->child[c] = vertices_count;
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
                     suffix_link = vertices[vertex_number].link;
                 }
                 else {
-                    if(previous_internal != 0) {
-                        vertices[previous_internal].link = vertex_number;
-                        previous_internal = 0;
-                    }
                     return suffix;
                 }
             }
             else {
                 // experimental split
                 if(work_string[current->left + len] != c) {
-                    if(previous_internal != 0) {
+                    if(previous_internal != 0 && suffix == internal) {
                         vertices[previous_internal].link = vertices_count;
                     }
                     previous_internal = vertices_count;
+                    internal = suffix + 1;
+
                     // new internal vertex with number "vertices_count"
                     vertices.emplace_back(vertex(current->left, current->left + len, current->parent, 0));
                     current = &vertices[vertex_number];
