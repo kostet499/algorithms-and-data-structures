@@ -33,6 +33,10 @@ public:
         work_string += delimiter;
     }
 
+    size_t get_size() {
+        return vertices_count;
+    }
+
     void build_tree() {
         size_t previous = 0;
         for(size_t i = 0; i < size; ++i) {
@@ -40,40 +44,37 @@ public:
         }
     }
 
-    void dfs(size_t ver, size_t &number, size_t fst, size_t scd, size_t parent, bool to_print) {
+    void dfs(size_t ver, size_t &number, size_t fst, size_t scd, size_t parent) {
         vertex *current = &vertices[ver];
         if(ver != 0) {
             ++number;
-            if(to_print) {
-                // to fix
-                cout << parent << " ";
-                // 1 string
-                if(current->left >= fst) {
-                    cout << 1 << " " << current->left - fst << " " << current->right - fst << endl;
-                }
-                    // 0 string
-                else if(current->right > fst){
-                    cout << 0 << " " << current->left << " " << current->right - scd << endl;
-                }
-                    // hmm, 0 string
-                else {
-                    cout << 0 << " " << current->left << " " << current->right << endl;
-                }
+            cout << parent << " ";
+            // 1 string
+            if(current->left >= fst) {
+                cout << 1 << " " << current->left - fst << " " << current->right - fst << endl;
+            }
+                // 0 string
+            else if(current->right > fst){
+                cout << 0 << " " << current->left << " " << current->right - scd << endl;
+            }
+                // hmm, 0 string
+            else {
+                cout << 0 << " " << current->left << " " << current->right << endl;
             }
         }
 
         parent = number;
         if(current->child.find('#') != current->child.end()) {
-            dfs(current->child['#'], number, fst, scd, parent, to_print);
+            dfs(current->child['#'], number, fst, scd, parent);
         }
 
         if(current->child.find('$') != current->child.end()) {
-            dfs(current->child['$'], number, fst, scd, parent, to_print);
+            dfs(current->child['$'], number, fst, scd, parent);
         }
 
         for(char i = 'a'; i <= 'z'; ++i) {
             if(current->child.find(i) != current->child.end()) {
-                dfs(current->child[i], number, fst, scd, parent, to_print);
+                dfs(current->child[i], number, fst, scd, parent);
             }
         }
     }
@@ -105,7 +106,7 @@ private:
         int len = 0;
 
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
-            //suffix_link = 0;
+            suffix_link = 0;
             // we are in the root, so distance from root to root is 0, len is to be counted
             if(suffix_link == 0) {
                 distance = 0;
@@ -198,10 +199,8 @@ int main() {
     SuffixTree mysuf(concat);
     mysuf.build_tree();
     size_t number = 0;
-    mysuf.dfs(0, number, s.size(), t.size(), number, false);
-    cout << number + 1 << endl;
-    number = 0;
-    mysuf.dfs(0, number, s.size(), t.size(), number, true);
+    cout << mysuf.get_size() << endl;
+    mysuf.dfs(0, number, s.size(), t.size(), 0);
     //mysuf.show_internal_links();
     return 0;
 }
