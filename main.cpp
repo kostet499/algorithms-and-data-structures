@@ -106,8 +106,9 @@ private:
         int len = 0;
 
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
-            suffix_link = 0;
+            //suffix_link = 0;
             // we are in the root, so distance from root to root is 0, len is to be counted
+            assert(distance >= 0 || suffix_link == 0);
             if(suffix_link == 0) {
                 distance = 0;
                 len = phase - suffix;
@@ -137,9 +138,6 @@ private:
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
                     suffix_link = vertices[vertex_number].link;
-                    // implicit shit
-                    len = vertices[suffix_link].len();
-                    distance = phase - suffix - len;
                 }
                 else {
                     if(previous_internal != 0) {
@@ -174,6 +172,7 @@ private:
                     // we go back, so distance is changed -> len also changed
                     distance -= vertices[parent].len();
                     len += vertices[parent].len();
+                    assert(distance >= 0);
                 }
                 else {
                     return suffix;
@@ -192,9 +191,9 @@ int main() {
     ios_base::sync_with_stdio(0);
     string s;
     string t;
-    // s = "asdjasfhaslhfjkshahsjsssssssssaashdajshdkjshadhhhhhhhhhhhhhhahdshdshshadjhsajkhdkjsfhkjh$";
-    // t = "sadjsasdjklsakdahaaaaaaaaaaaasjdkajsjdsjssssssssss#";
-    cin >> s >> t;
+    s = "asdjasfhaslhfjkshahsjsssssssssaashdajshdkjshadhhhhhhhhhhhhhhahdshdshshadjhsajkhdkjsfhkjh$";
+    t = "sadjsasdjklsakdahaaaaaaaaaaaasjdkajsjdsjssssssssss#";
+    //cin >> s >> t;
     string concat = s + t;
     SuffixTree mysuf(concat);
     mysuf.build_tree();
