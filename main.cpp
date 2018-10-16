@@ -106,7 +106,7 @@ private:
         int len = 0;
 
         // exp
-        size_t internal = iterations_begin;
+        size_t internal = 0;
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
             //suffix_link = 0;
             // we are in the root, so distance from root to root is 0, len is to be counted
@@ -179,7 +179,13 @@ private:
                 }
             }
             // each phase our suffix is incremented, so out length should be decremented
-            --distance;
+            // but when we are in the root (distance = 0) we must decrement len
+            if(distance) {
+                --distance;
+            }
+            else {
+                --len;
+            }
         }
         return phase + 1;
     }
@@ -191,8 +197,8 @@ int main() {
     ios_base::sync_with_stdio(0);
     string s;
     string t;
-    s = "asdjasfhaslhfjkshahsjsssssssssaashdajshdkjshadhhhhhhhhhhhhhhahdshdshshadjhsajkhdkjsfhkjh$";
-    t = "sadjsasdjklsakdahaaaaaaaaaaaasjdkajsjdsjssssssssss#";
+    s = "aaaabbbbbbaaaaaaaaabbbbbbbbaaaaaaaabbb$";
+    t = "aaaaaaabbbbbbbbababbababbbbbbbbbbbbabababbaba#";
     //cin >> s >> t;
     string concat = s + t;
     SuffixTree mysuf(concat);
