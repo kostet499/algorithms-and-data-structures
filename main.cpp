@@ -14,6 +14,10 @@ struct vertex {
         parent = p;
         link = lin;
     }
+
+    int len() {
+        return right - left;
+    }
 };
 
 class SuffixTree {
@@ -93,43 +97,36 @@ private:
         char c = work_string[phase];
 
         size_t suffix_link = 0;
+        // the new inserted internal vertex to build a suffix link
         size_t previous_internal = 0;
+        // distance from root (summing by all edges)
+        int distance = 0;
+        // position on current edge
         int len = 0;
-        char symbol;
+
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
-            // experimental decent
-            size_t vertex_number = 0;
+            //suffix_link = 0;
+            // we are in the root, so distance from root to root is 0, len is to be counted
             if(suffix_link == 0) {
+                distance = 0;
                 len = phase - suffix;
-                vertex *current = &vertices[vertex_number];
-                int difference = current->right - current->left;
-                while(len > difference) {
-                    symbol = work_string[suffix + difference];
-                    assert(current->child.find(symbol) != current->child.end());
-                    vertex_number = current->child[symbol];
-                    current = &vertices[vertex_number];
-                    difference += current->right - current->left;
-                }
-                len -= difference - current->right + current->left;
-            }
-            else {
-                vertex *current = &vertices[suffix_link];
-                len += current->right - current->left;
-                int difference = current->right - current->left;
-                while(len > difference) {
-                    symbol = work_string[suffix + difference];
-                    assert(current->child.find(symbol) != current->child.end());
-                    vertex_number = current->child[symbol];
-                    current = &vertices[vertex_number];
-                    difference += current->right - current->left;
-                }
-                len -= difference - current->right + current->left;
             }
 
+            size_t vertex_number = suffix_link;
             vertex *current = &vertices[vertex_number];
+            while(len > current->len()) {
+                len -= current->len();
+                distance += current->len();
+                assert(current->child.count(work_string[suffix + distance]));
+                vertex_number = current->child[work_string[suffix + distance]];
+                current = &vertices[vertex_number];
+            }
+
+            // invariant of cycle: len + distance = phase  - suffix
+            assert(len + distance == phase - suffix);
 
             // internal vertex handle
-            if(current->left + len == current->right) {
+            if(len == current->len()) {
                 if(current->child.find(c) == current->child.end()) {
                     if(previous_internal != 0) {
                         vertices[previous_internal].link = vertex_number;
@@ -139,7 +136,9 @@ private:
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
                     suffix_link = vertices[vertex_number].link;
-                    len = 0;
+                    // implicit shit
+                    len = vertices[suffix_link].len();
+                    distance = phase - suffix - len;
                 }
                 else {
                     if(previous_internal != 0) {
@@ -168,12 +167,19 @@ private:
                     vertices.emplace_back(vertex(phase, work_string.size(), vertices_count - 1, 0));
                     vertices[vertices_count - 1].child[c] = vertices_count;
                     ++vertices_count;
-                    suffix_link = vertices[vertices[previous_internal].parent].link;
+
+                    size_t parent = vertices[previous_internal].parent;
+                    suffix_link = vertices[parent].link;
+                    // we go back, so distance is changed -> len also changed
+                    distance -= vertices[parent].len();
+                    len += vertices[parent].len();
                 }
                 else {
                     return suffix;
                 }
             }
+            // each phase our suffix is incremented, so out length should be decremented
+            --distance;
         }
         return phase + 1;
     }
@@ -185,6 +191,8 @@ int main() {
     ios_base::sync_with_stdio(0);
     string s;
     string t;
+    // s = "asdjasfhaslhfjkshahsjsssssssssaashdajshdkjshadhhhhhhhhhhhhhhahdshdshshadjhsajkhdkjsfhkjh$";
+    // t = "sadjsasdjklsakdahaaaaaaaaaaaasjdkajsjdsjssssssssss#";
     cin >> s >> t;
     string concat = s + t;
     SuffixTree mysuf(concat);
@@ -193,7 +201,7 @@ int main() {
     mysuf.dfs(0, number, s.size(), t.size(), number, false);
     cout << number + 1 << endl;
     number = 0;
-    //mysuf.dfs(0, number, s.size(), t.size(), number, true);
-    mysuf.show_internal_links();
+    mysuf.dfs(0, number, s.size(), t.size(), number, true);
+    //mysuf.show_internal_links();
     return 0;
 }
