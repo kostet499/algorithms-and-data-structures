@@ -2,7 +2,7 @@
 using namespace std;
 
 struct vertex {
-    unordered_map <char, size_t> child;
+    size_t child[28];
     int left;
     int right;
     int distance;
@@ -16,6 +16,30 @@ struct vertex {
         parent = p;
         link = lin;
         distance = -1;
+        for(int i = 0; i < 28; ++i) {
+            child[i] = 0;
+        }
+    }
+
+    bool is_child(char c) {
+        return child[determine(c)] > 0;
+    }
+
+    void make_child(char c, size_t value) {
+        child[determine(c)] = value;
+    }
+
+    size_t get_child(char c) {
+        return child[determine(c)];
+    }
+
+    int determine(char c) {
+        if(c >= 'a') {
+            return c - 'a';
+        }
+        else {
+            return 26 + c - '#';
+        }
     }
 
     int len() {
@@ -69,17 +93,18 @@ public:
         }
 
         parent = number;
-        if(current->child.find('#') != current->child.end()) {
-            dfs(current->child['#'], number, fst, scd, parent);
+
+        if(current->is_child('#')) {
+            dfs(current->get_child('#'), number, fst, scd, parent);
         }
 
-        if(current->child.find('$') != current->child.end()) {
-            dfs(current->child['$'], number, fst, scd, parent);
+        if(current->is_child('$')) {
+            dfs(current->get_child('$'), number, fst, scd, parent);
         }
 
         for(char i = 'a'; i <= 'z'; ++i) {
-            if(current->child.find(i) != current->child.end()) {
-                dfs(current->child[i], number, fst, scd, parent);
+            if(current->is_child(i)) {
+                dfs(current->get_child(i), number, fst, scd, parent);
             }
         }
     }
@@ -153,23 +178,20 @@ private:
             while(len > current->len()) {
                 len -= current->len();
                 distance += current->len();
-                if(current->child.count(work_string[suffix + distance]) == 0) {
-                    throw 0;
-                }
-                vertex_number = current->child[work_string[suffix + distance]];
+                vertex_number = current->get_child(work_string[suffix + distance]);
                 current = &vertices[vertex_number];
             }
 
 
-            result_stack.emplace_back(vertex_number);
+            // result_stack.emplace_back(vertex_number);
             // internal vertex handle
             if(len == current->len()) {
                 if(previous_internal != 0 && suffix == internal) {
                     vertices[previous_internal].link = vertex_number;
                     previous_internal = 0;
                 }
-                if(current->child.find(c) == current->child.end()) {
-                    current->child[c] = vertices_count;
+                if(!current->is_child(c)) {
+                    current->make_child(c, vertices_count);
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
                     suffix_link = vertices[vertex_number].link;
@@ -191,14 +213,14 @@ private:
                     vertices[vertex_number].distance = -1;
                     vertices.emplace_back(vertex(current->left, current->left + len, current->parent, 0));
                     current = &vertices[vertex_number];
-                    vertices[vertices_count].child[work_string[current->left + len]] = vertex_number;
-                    vertices[current->parent].child[work_string[current->left]] = vertices_count;
+                    vertices[vertices_count].make_child(work_string[current->left + len], vertex_number);
+                    vertices[current->parent].make_child(work_string[current->left], vertices_count);
                     current->parent = vertices_count;
                     current->left += len;
                     ++vertices_count;
                     // new leaf vertex
                     vertices.emplace_back(vertex(phase, work_string.size(), vertices_count - 1, 0));
-                    vertices[vertices_count - 1].child[c] = vertices_count;
+                    vertices[vertices_count - 1].make_child(c, vertices_count);
                     ++vertices_count;
 
                     size_t parent = vertices[previous_internal].parent;
