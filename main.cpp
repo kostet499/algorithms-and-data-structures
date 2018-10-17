@@ -5,6 +5,8 @@ struct vertex {
     unordered_map <char, size_t> child;
     int left;
     int right;
+    int distance;
+
     size_t parent;
     size_t link;
 
@@ -13,6 +15,7 @@ struct vertex {
         right = r;
         parent = p;
         link = lin;
+        distance = -1;
     }
 
     int len() {
@@ -22,14 +25,16 @@ struct vertex {
 
 class SuffixTree {
 public:
-    SuffixTree(string &built_string) {
+    SuffixTree(string &built_string, bool optimized) {
         work_string = built_string;
         size = built_string.size();
         vertices.emplace_back(vertex(0, 0, 0, 0));
         vertices_count = 1;
+        vertices[0].distance = 0;
+        this->optimized = optimized;
     }
 
-    SuffixTree(string &built_string, char delimiter) : SuffixTree(built_string) {
+    SuffixTree(string &built_string, bool optimized, char delimiter) : SuffixTree(built_string, optimized) {
         work_string += delimiter;
     }
 
@@ -40,7 +45,25 @@ public:
     void build_tree() {
         size_t previous = 0;
         for(size_t i = 0; i < size; ++i) {
-            previous = make_phase(i, previous);
+            try {
+                previous = make_phase(i, previous);
+            }
+            catch(int e) {
+                if(e == 1) {
+                    cout << "distance < 0 but not a root";
+                }
+                else if(e == 0) {
+                    cout << "no such symbol";
+                }
+                else if(e == 2) {
+                    cout << "mistake in invariant";
+                }
+                else if(e == 3) {
+                    cout << "distance < 0 after parent";
+                }
+                cout << endl;
+                return;
+            }
         }
     }
 
@@ -88,11 +111,36 @@ public:
         }
     }
 
+    void compare(SuffixTree &object) {
+        for(int i = 0; i < min(object.result_stack.size(), this->result_stack.size()); i++) {
+           if(object.result_stack[i] != this->result_stack[i]) {
+               if(i > 0) {
+                   cout << "last equal: " << object.result_stack[i - 1] << endl;
+               }
+               cout << "this obj says: " << this->result_stack[i] << endl;
+               cout << "not this objt: " << object.result_stack[i] << endl;
+               return;
+           }
+        }
+    }
+
 private:
     string work_string;
     vector<vertex> vertices;
+    vector<size_t> result_stack;
     size_t size;
     size_t vertices_count;
+    bool optimized;
+
+    int dist(size_t vertex_number) {
+        if(vertices[vertex_number].distance != -1) {
+            return vertices[vertex_number].distance;
+        }
+        else {
+            size_t parent = vertices[vertex_number].parent;
+            return dist(parent) + vertices[parent].len();
+        }
+    }
 
     size_t make_phase(size_t phase, size_t iterations_begin) {
         char c = work_string[phase];
@@ -102,33 +150,42 @@ private:
         size_t previous_internal = 0;
         // distance from root (summing by all edges)
         int distance = 0;
-        // position on current edge
+        // symbols that we haven't passed yet
         int len = 0;
 
         // exp
         size_t internal = 0;
+
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
             //suffix_link = 0;
             // we are in the root, so distance from root to root is 0, len is to be counted
-            assert(distance >= 0 || suffix_link == 0);
-            if(suffix_link == 0) {
-                distance = 0;
-                len = phase - suffix;
+            if(distance < 0 && suffix_link == 0) {
+                throw 1;
+            }
+
+            if(!optimized) {
+                suffix_link = 0;
             }
 
             size_t vertex_number = suffix_link;
             vertex *current = &vertices[vertex_number];
+            distance = dist(vertex_number);
+            len = phase - suffix - distance;
             while(len > current->len()) {
                 len -= current->len();
                 distance += current->len();
-                assert(current->child.count(work_string[suffix + distance]));
+                if(current->child.count(work_string[suffix + distance]) == 0) {
+                    throw 0;
+                }
                 vertex_number = current->child[work_string[suffix + distance]];
                 current = &vertices[vertex_number];
             }
 
             // invariant of cycle: len + distance = phase  - suffix
-            assert(len + distance == phase - suffix);
-
+            if(len + distance != phase - suffix) {
+                throw 2;
+            }
+            result_stack.emplace_back(vertex_number);
             // internal vertex handle
             if(len == current->len()) {
                 if(previous_internal != 0 && suffix == internal) {
@@ -140,6 +197,9 @@ private:
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
                     suffix_link = vertices[vertex_number].link;
+                    if(distance < 0) {
+                        throw 3;
+                    }
                 }
                 else {
                     return suffix;
@@ -169,26 +229,15 @@ private:
 
                     size_t parent = vertices[previous_internal].parent;
                     suffix_link = vertices[parent].link;
-                    // we go back, so distance is changed -> len also changed
-                    distance -= vertices[parent].len();
-                    len += vertices[parent].len();
-                    assert(distance >= 0);
                 }
                 else {
                     return suffix;
                 }
             }
-            // each phase our suffix is incremented, so out length should be decremented
-            // but when we are in the root (distance = 0) we must decrement len
-            if(distance) {
-                --distance;
-            }
-            else {
-                --len;
-            }
         }
         return phase + 1;
     }
+
 };
 
 int main() {
@@ -197,12 +246,15 @@ int main() {
     ios_base::sync_with_stdio(0);
     string s;
     string t;
-    s = "aaaabbbbbbaaaaaaaaabbbbbbbbaaaaaaaabbb$";
-    t = "aaaaaaabbbbbbbbababbababbbbbbbbbbbbabababbaba#";
+    //s = "aaab$";
+    //t = "abaabaaabaaaab#";
     //cin >> s >> t;
     string concat = s + t;
-    SuffixTree mysuf(concat);
+    SuffixTree mysuf(concat, true);
+    //SuffixTree badsuf(concat, false);
     mysuf.build_tree();
+    //badsuf.build_tree();
+    //badsuf.compare(mysuf);
     size_t number = 0;
     cout << mysuf.get_size() << endl;
     mysuf.dfs(0, number, s.size(), t.size(), 0);
