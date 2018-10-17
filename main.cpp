@@ -55,6 +55,8 @@ public:
         vertices.emplace_back(vertex(0, 0, 0, 0));
         vertices_count = 1;
         vertices[0].distance = 0;
+        dist_calls = 0;
+        in_root = 0;
         this->optimized = optimized;
     }
 
@@ -77,18 +79,18 @@ public:
         vertex *current = &vertices[ver];
         if(ver != 0) {
             ++number;
-            cout << parent << " ";
+            printf("%d ", parent);
             // 1 string
             if(current->left >= fst) {
-                cout << 1 << " " << current->left - fst << " " << current->right - fst << endl;
+                printf("%d %d %d\n", 1, current->left - fst, current->right - fst);
             }
                 // 0 string
             else if(current->right > fst){
-                cout << 0 << " " << current->left << " " << current->right - scd << endl;
+                printf("%d %d %d\n", 0, current->left, current->right - scd);
             }
                 // hmm, 0 string
             else {
-                cout << 0 << " " << current->left << " " << current->right << endl;
+                printf("%d %d %d\n", 0, current->left, current->right);
             }
         }
 
@@ -131,6 +133,14 @@ public:
         }
     }
 
+    size_t get_dist_calls() {
+        return dist_calls;
+    }
+
+    size_t get_in_root() {
+        return in_root;
+    }
+
 private:
     string work_string;
     vector<vertex> vertices;
@@ -138,8 +148,11 @@ private:
     size_t size;
     size_t vertices_count;
     bool optimized;
+    size_t dist_calls;
+    size_t in_root;
 
     int dist(size_t vertex_number) {
+        ++dist_calls;
         if(vertices[vertex_number].distance != -1) {
             return vertices[vertex_number].distance;
         }
@@ -175,6 +188,9 @@ private:
             vertex *current = &vertices[vertex_number];
             distance = dist(vertex_number);
             len = phase - suffix - distance;
+            if(vertex_number == 0) {
+                ++in_root;
+            }
             while(len > current->len()) {
                 len -= current->len();
                 distance += current->len();
@@ -236,13 +252,20 @@ private:
 
 };
 
+void gen_test(string &s, int size) {
+    while(s.size() < size){
+        s += "a";
+    }
+}
+
 int main() {
     cin.tie(0);
     cout.tie(0);
     ios_base::sync_with_stdio(0);
     string s;
     string t;
-    cin >> s >> t;
+    gen_test(s, 100000); s += "$"; gen_test(t, 10000); t += "#";
+    //cin >> s >> t;
     string concat = s + t;
     SuffixTree mysuf(concat, true);
     //SuffixTree badsuf(concat, false);
@@ -251,7 +274,8 @@ int main() {
     //badsuf.compare(mysuf);
     size_t number = 0;
     cout << mysuf.get_size() << endl;
-    mysuf.dfs(0, number, s.size(), t.size(), 0);
-    //mysuf.show_internal_links();
+    //mysuf.dfs(0, number, s.size(), t.size(), 0);
+    cout << mysuf.get_dist_calls() << endl;
+    cout << mysuf.get_in_root() << endl;
     return 0;
 }
