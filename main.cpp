@@ -57,6 +57,7 @@ public:
         vertices[0].distance = 0;
         dist_calls = 0;
         in_root = 0;
+        previous_vertex_number = 0;
         this->optimized = optimized;
     }
 
@@ -147,6 +148,7 @@ private:
     vector<size_t> result_stack;
     size_t size;
     size_t vertices_count;
+    size_t previous_vertex_number;
     bool optimized;
     size_t dist_calls;
     size_t in_root;
@@ -165,13 +167,14 @@ private:
     size_t make_phase(size_t phase, size_t iterations_begin) {
         char c = work_string[phase];
 
-        size_t suffix_link = 0;
+        size_t suffix_link = previous_vertex_number;
         // the new inserted internal vertex to build a suffix link
         size_t previous_internal = 0;
         // distance from root (summing by all edges)
         int distance = 0;
         // symbols that we haven't passed yet
         int len = 0;
+
 
         // exp
         size_t internal = 0;
@@ -213,6 +216,7 @@ private:
                     suffix_link = vertices[vertex_number].link;
                 }
                 else {
+                    previous_vertex_number = current->get_child(c);
                     return suffix;
                 }
             }
@@ -243,10 +247,12 @@ private:
                     suffix_link = vertices[parent].link;
                 }
                 else {
+                    previous_vertex_number = vertex_number;
                     return suffix;
                 }
             }
         }
+        previous_vertex_number = 0;
         return phase + 1;
     }
 
@@ -264,8 +270,8 @@ int main() {
     ios_base::sync_with_stdio(0);
     string s;
     string t;
-    gen_test(s, 100000); s += "$"; gen_test(t, 10000); t += "#";
-    //cin >> s >> t;
+    //gen_test(s, 100000); s += "$"; gen_test(t, 10000); t += "#";
+    cin >> s >> t;
     string concat = s + t;
     SuffixTree mysuf(concat, true);
     //SuffixTree badsuf(concat, false);
@@ -274,8 +280,8 @@ int main() {
     //badsuf.compare(mysuf);
     size_t number = 0;
     cout << mysuf.get_size() << endl;
-    //mysuf.dfs(0, number, s.size(), t.size(), 0);
-    cout << mysuf.get_dist_calls() << endl;
-    cout << mysuf.get_in_root() << endl;
+    mysuf.dfs(0, number, s.size(), t.size(), 0);
+    //cout << mysuf.get_dist_calls() << endl;
+    //cout << mysuf.get_in_root() << endl;
     return 0;
 }
