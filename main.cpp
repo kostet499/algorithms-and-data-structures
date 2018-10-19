@@ -1,10 +1,24 @@
-#include <bits/stdc++.h>
-using namespace std;
+#include <vector>
+#include <string>
+#include <iostream>
+#include <stdio.h>
 
+using std::ios_base;
+using std::cin;
+using std::cout;
+using std::endl;
+using std::vector;
+using std::string;
+
+// struct of node in the tree
 struct vertex {
+    // array for storing symbols
     size_t child[28];
+    // left border excluding
     int left;
+    // right border on edge - excluding
     int right;
+    // distance from root
     int distance;
 
     size_t parent;
@@ -33,6 +47,7 @@ struct vertex {
         return child[determine(c)];
     }
 
+    // determine the index of char in child array
     int determine(char c) {
         if(c >= 'a') {
             return c - 'a';
@@ -42,6 +57,7 @@ struct vertex {
         }
     }
 
+    // length of the edge to that vertex
     int len() {
         return right - left;
     }
@@ -49,19 +65,15 @@ struct vertex {
 
 class SuffixTree {
 public:
-    SuffixTree(string &built_string, bool optimized) {
+    SuffixTree(string &built_string) {
         work_string = built_string;
-        size = built_string.size();
         vertices.emplace_back(vertex(0, 0, 0, 0));
         vertices_count = 1;
         vertices[0].distance = 0;
-        dist_calls = 0;
-        in_root = 0;
         previous_vertex_number = 0;
-        this->optimized = optimized;
     }
 
-    SuffixTree(string &built_string, bool optimized, char delimiter) : SuffixTree(built_string, optimized) {
+    SuffixTree(string &built_string, char delimiter) : SuffixTree(built_string) {
         work_string += delimiter;
     }
 
@@ -69,13 +81,15 @@ public:
         return vertices_count;
     }
 
+    // passes the phases of algorithm
     void build_tree() {
         size_t previous = 0;
-        for(size_t i = 0; i < size; ++i) {
+        for(size_t i = 0; i < work_string.size(); ++i) {
             previous = make_phase(i, previous);
         }
     }
 
+    // visits the tree in  ascending lexicographical order and prints the vertices
     void dfs(size_t ver, size_t &number, size_t fst, size_t scd, size_t parent) {
         vertex *current = &vertices[ver];
         if(ver != 0) {
@@ -112,49 +126,15 @@ public:
         }
     }
 
-    // test functions
-    void show_internal_links() {
-        int i = 0;
-        for(auto vert : vertices) {
-            cout << i << " " << vert.link << endl;
-            ++i;
-        }
-    }
-
-    void compare(SuffixTree &object) {
-        for(int i = 0; i < min(object.result_stack.size(), this->result_stack.size()); i++) {
-            if(object.result_stack[i] != this->result_stack[i]) {
-                if(i > 0) {
-                    cout << "last equal: " << object.result_stack[i - 1] << endl;
-                }
-                cout << "this obj says: " << this->result_stack[i] << endl;
-                cout << "not this objt: " << object.result_stack[i] << endl;
-                return;
-            }
-        }
-    }
-
-    size_t get_dist_calls() {
-        return dist_calls;
-    }
-
-    size_t get_in_root() {
-        return in_root;
-    }
-
 private:
     string work_string;
     vector<vertex> vertices;
-    vector<size_t> result_stack;
-    size_t size;
     size_t vertices_count;
+    // number of the vertex where we ended previous phase
     size_t previous_vertex_number;
-    bool optimized;
-    size_t dist_calls;
-    size_t in_root;
 
+    // calculates the distance from root to that vertex (without the direct edge to vertex)
     int dist(size_t vertex_number) {
-        ++dist_calls;
         if(vertices[vertex_number].distance != -1) {
             return vertices[vertex_number].distance;
         }
@@ -164,36 +144,30 @@ private:
         }
     }
 
+    //
     size_t make_phase(size_t phase, size_t iterations_begin) {
         char c = work_string[phase];
 
         size_t suffix_link = previous_vertex_number;
         // the new inserted internal vertex to build a suffix link
         size_t previous_internal = 0;
-        // distance from root (summing by all edges)
+        // distance from root (summing by all edges except direct edge to vertex)
         int distance = 0;
-        // symbols that we haven't passed yet
+        // symbols that we haven't passed yet (direct edge to vertex)
         int len = 0;
 
-
-        // exp
+        // suffix where the new internal vertex was created (automatically added +1 to make if statement without +1)
         size_t internal = 0;
 
         for(size_t suffix = iterations_begin; suffix <= phase; ++suffix) {
-            //suffix_link = 0;
-            // we are in the root, so distance from root to root is 0, len is to be counted
-
-            if(!optimized) {
-                suffix_link = 0;
-            }
-
+            // we come through suffix link to a desired vertex
             size_t vertex_number = suffix_link;
             vertex *current = &vertices[vertex_number];
             distance = dist(vertex_number);
             len = phase - suffix - distance;
-            if(vertex_number == 0) {
-                ++in_root;
-            }
+
+            // we descend until we can
+            // we can if length of the current edge is less than symbols that we need to pass (len)
             while(len > current->len()) {
                 len -= current->len();
                 distance += current->len();
@@ -201,15 +175,19 @@ private:
                 current = &vertices[vertex_number];
             }
 
-
-            // result_stack.emplace_back(vertex_number);
             // internal vertex handle
+            // in case we have stopped at the end of the edge, so the last symbol we need to check in child of vertex
             if(len == current->len()) {
+                // making suffix link for previous memorized internal vertex
                 if(previous_internal != 0 && suffix == internal) {
                     vertices[previous_internal].link = vertex_number;
                     previous_internal = 0;
                 }
+                // current vertex is not a new internal so we don't memorize it
+                // (we have already figured out its suffix link, and it won't change)
+
                 if(!current->is_child(c)) {
+                    // we make new leaf from existing internal vertex
                     current->make_child(c, vertices_count);
                     vertices.emplace_back(vertex(phase, work_string.size(), vertex_number, 0));
                     ++vertices_count;
@@ -221,16 +199,23 @@ private:
                 }
             }
             else {
-                // experimental split
+                // we have stopped at the middle of the edge, so we need to check symbol
                 if(work_string[current->left + len] != c) {
+                    // in that case we split the edge, so new internal vertex is created
+                    // its number will be - vertices_count
+
+                    // making suffix link for previous memorized internal vertex
                     if(previous_internal != 0 && suffix == internal) {
                         vertices[previous_internal].link = vertices_count;
                     }
+                    // we need to calculate its suffix link, so we memorize it
                     previous_internal = vertices_count;
                     internal = suffix + 1;
 
-                    // new internal vertex with number "vertices_count"
+                    // direct edge to vertex_number was modified, so we need to calculate it again
                     vertices[vertex_number].distance = -1;
+
+                    // hard splitting operation
                     vertices.emplace_back(vertex(current->left, current->left + len, current->parent, 0));
                     current = &vertices[vertex_number];
                     vertices[vertices_count].make_child(work_string[current->left + len], vertex_number);
@@ -238,11 +223,13 @@ private:
                     current->parent = vertices_count;
                     current->left += len;
                     ++vertices_count;
-                    // new leaf vertex
+
+                    // new leaf vertex created
                     vertices.emplace_back(vertex(phase, work_string.size(), vertices_count - 1, 0));
                     vertices[vertices_count - 1].make_child(c, vertices_count);
                     ++vertices_count;
 
+                    // we go back in tree to receive a suffix link
                     size_t parent = vertices[previous_internal].parent;
                     suffix_link = vertices[parent].link;
                 }
@@ -258,30 +245,18 @@ private:
 
 };
 
-void gen_test(string &s, int size) {
-    while(s.size() < size){
-        s += "a";
-    }
-}
-
 int main() {
     cin.tie(0);
     cout.tie(0);
     ios_base::sync_with_stdio(0);
     string s;
     string t;
-    //gen_test(s, 100000); s += "$"; gen_test(t, 10000); t += "#";
     cin >> s >> t;
     string concat = s + t;
-    SuffixTree mysuf(concat, true);
-    //SuffixTree badsuf(concat, false);
+    SuffixTree mysuf(concat);
     mysuf.build_tree();
-    //badsuf.build_tree();
-    //badsuf.compare(mysuf);
     size_t number = 0;
     cout << mysuf.get_size() << endl;
     mysuf.dfs(0, number, s.size(), t.size(), 0);
-    //cout << mysuf.get_dist_calls() << endl;
-    //cout << mysuf.get_in_root() << endl;
     return 0;
 }
