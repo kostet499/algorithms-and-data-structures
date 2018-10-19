@@ -14,9 +14,9 @@ using std::string;
 struct vertex {
     // array for storing symbols
     size_t child[28];
-    // left border excluding
+    // left border - including
     int left;
-    // right border on edge - excluding
+    // right border of edge - excluding
     int right;
     // distance from root
     int distance;
