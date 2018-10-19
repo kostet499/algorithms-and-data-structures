@@ -144,7 +144,6 @@ private:
         }
     }
 
-    //
     size_t make_phase(size_t phase, size_t iterations_begin) {
         char c = work_string[phase];
 
