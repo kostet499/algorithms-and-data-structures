@@ -17,8 +17,8 @@ class SuffixArray {
 public:
     SuffixArray(string &, char);
 
-    int* get_sorted_suffix() {
-        return &(sorted_suffix[0]);
+    int& operator[](int& i) {
+        return sorted_suffix[i];
     }
 
     string& get_work_string() {
@@ -199,19 +199,6 @@ int SuffixArray::index_char(char c) const {
     return static_cast<int>(c);
 }
 
-bool less(string &a, string &b, int a_pos, int b_pos) {
-    while(a_pos < a.length() && b_pos < b.length()) {
-        if(a[a_pos] == b[b_pos]) {
-            ++a_pos;
-            ++b_pos;
-        }
-        else {
-            return a[a_pos] < b[b_pos];
-        }
-    }
-    return a.length() <= a_pos;
-};
-
 int main() {
     std::ios_base::sync_with_stdio(0);
     cin.tie(0);
@@ -228,15 +215,15 @@ int main() {
     string concat = a + '?' + b + "#";
     SuffixArray conc(concat, '#');
 
-    int a_end_size = a.length() + 1;
-    int b_end_size = conc.real_size() - a.length() - 1;
+    size_t a_end_size = a.length() + 1;
+    size_t b_end_size = conc.real_size() - a.length() - 1;
 
     vector <int> a_suf(a_end_size);
     vector <int> b_suf(b_end_size);
     int index_a = 0;
     int index_b = 0;
     for(int i = 0; i < conc.real_size(); i++) {
-        int current = *(conc.get_sorted_suffix() + i);
+        int current = conc[i];
         if(current < a_end_size) {
             a_suf[index_a] = i;
             ++index_a;
@@ -253,8 +240,8 @@ int main() {
     int previous = 0;
 
     while(a_indicator < a_end_size && b_indicator < b_end_size) {
-        int sufa = *(conc.get_sorted_suffix() + a_suf[a_indicator]);
-        int sufb = *(conc.get_sorted_suffix() + b_suf[b_indicator]);
+        int sufa = conc[a_suf[a_indicator]];
+        int sufb = conc[b_suf[b_indicator]];
         int equal_part = conc.lcp(sufa, sufb);
 
         if(equal_part > previous) {
@@ -269,21 +256,15 @@ int main() {
             }
             else {
                 lexical_position = new_lex_pos;
-                previous = equal_part;
             }
         }
+        previous = equal_part;
 
-        if(less(a, b, sufa + equal_part, sufb + equal_part - a.length() - 1)) {
+        if(a_suf[a_indicator] < b_suf[b_indicator]) {
             ++a_indicator;
-            if(a_indicator < a_end_size) {
-                previous = std::min(previous, conc.lcp(sufa, *(conc.get_sorted_suffix() + a_suf[a_indicator])));
-            }
         }
         else {
             ++b_indicator;
-            if(b_indicator < b_end_size) {
-                previous = std::min(previous, conc.lcp(sufb, *(conc.get_sorted_suffix() + b_suf[b_indicator])));
-            }
         }
     }
 
