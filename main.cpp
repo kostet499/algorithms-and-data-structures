@@ -1,7 +1,5 @@
 #include <iostream>
 #include <vector>
-#include <utility>
-#include <fstream>
 
 using std::vector;
 using std::string;
@@ -13,33 +11,87 @@ using std::make_pair;
 using std::min;
 using std::max;
 
+class SparseTable {
+    int len = 0, wid = 0;
+    vector <vector<int> > table;
+    void initialise(vector <int>& a) {
+        len = a.size(), wid = log(len) + 1;
+        table.resize(len);
+        for(int i = 0; i < len; i++) {
+            table[i].resize(wid, INT32_MAX);
+            table[i][0] = a[i];
+        }
+
+        for(int j = 1; j < wid; j++) {
+            for(int i = 0; i < len; i++) {
+                int next = i + (1 << (j - 1));
+                int fst = table[i][j - 1];
+                int scd = INT32_MAX;
+                if(next < len) {
+                    scd = table[next][j - 1];
+                }
+                table[i][j] = min(fst, scd);
+            }
+        }
+    }
+
+    int log(int len) {
+        if(len == 1)
+            return 0;
+        return log(len / 2) + 1;
+    }
+
+public:
+    explicit SparseTable(vector <int>& build_vector) {
+        initialise(build_vector);
+    }
+
+    SparseTable() = default;
+
+    int get_min(int left, int right) {
+        int j = log(right - left + 1);
+        int next = right + 1 - (1 << j);
+        return min(table[next][j], table[left][j]);
+    }
+};
+
+
 class SuffixArray {
 public:
     SuffixArray(string &, char);
 
-    int& operator[](int& i) {
+    const vector<int> &get_sorted_suffix() {
+        return sorted_suffix;
+    }
+
+    const vector<int> &get_lcp() {
+        return lcp_values;
+    }
+
+    size_t real_size() {
+        return work_string.size();
+    }
+
+    int &operator[](int i) {
         return sorted_suffix[i];
     }
 
-    string& get_work_string() {
-        return work_string;
-    }
-
-    // least common prefix
-    int lcp(int, int);
-
-    int real_size() {
-        return sorted_suffix.size();
+    int lcp(int a, int b) {
+        a = classes_equal[a];
+        b = classes_equal[b];
+        if(a > b)
+            std::swap(a, b);
+        return table.get_min(a, b - 1);
     }
 
 private:
     vector<int> sorted_suffix;
-    vector<vector<int> > classes_equal;
+    vector<int> classes_equal;
+    vector<int> lcp_values;
     string work_string;
     int char_size;
     int classes_number;
-    int class_index;
-    int power2;
+    SparseTable table;
 
     char symbol_to_fill;
 
@@ -53,9 +105,11 @@ private:
 
     void sort_group(int);
 
-    int step_left(int, int) const;
+    int step_left(int index, int step) const;
 
-    int step_right(int, int) const;
+    int step_right(int index, int step) const;
+
+    void build_lcp();
 };
 
 int SuffixArray::step_left(int index, int step) const {
@@ -66,6 +120,29 @@ int SuffixArray::step_left(int index, int step) const {
     return index;
 }
 
+// classes_equal is suf^(-1) array
+void SuffixArray::build_lcp() {
+    int current_length = 0;
+    for(int i = 0; i < lcp_values.size(); ++i) {
+        if(current_length > 0) {
+            --current_length;
+        }
+
+        if(classes_equal[i] == lcp_values.size() - 1) {
+            lcp_values[lcp_values.size() - 1] = 0;
+            current_length = 0;
+        }
+        else {
+            int prev = sorted_suffix[classes_equal[i] + 1];
+            while(std::max(prev + current_length, i + current_length) < lcp_values.size()
+                    && work_string[prev + current_length] == work_string[i + current_length]) {
+                ++current_length;
+            }
+            lcp_values[classes_equal[i]] = current_length;
+        }
+    }
+}
+
 int SuffixArray::step_right(int index, int step) const {
     index += step;
     if(index >= sorted_suffix.size()) {
@@ -74,39 +151,35 @@ int SuffixArray::step_right(int index, int step) const {
     return index;
 }
 
-SuffixArray::SuffixArray(string &build_string, char delimiter) {
-    symbol_to_fill = delimiter;
+SuffixArray::SuffixArray(string &build_string, char symbol) {
+    symbol_to_fill = symbol;
     make_work_string(build_string);
     // 256 classes because of 1-byte char
     char_size = 256;
+    classes_equal.resize(work_string.length(), 0);
     sorted_suffix.resize(work_string.length(), 0);
+    lcp_values.resize(work_string.length(), 0);
     make_sorted_first();
     make_sorted_finish();
+    build_lcp();
+    table = SparseTable(lcp_values);
 }
 
 void SuffixArray::make_work_string(string &build_string) {
     int len = build_string.length();
     int new_len = 1;
-    power2 = 0;
     while(new_len < len) {
         new_len <<= 1;
-        ++power2;
     }
-
     work_string = build_string;
     for(int i = 0; i < new_len - len; i++) {
         work_string += symbol_to_fill;
-    }
-
-    classes_equal.resize(power2 + 1);
-    for(int i = 0; i < power2 + 1; i++) {
-        classes_equal[i].resize(new_len, -1);
     }
 }
 
 void SuffixArray::make_sorted_first() {
     vector<int> classes_symbol(char_size, 0);
-    class_index = 0;
+
     // we even don't need to sort symbols, encoding does it for us
     for(auto c : work_string) {
         ++classes_symbol[index_char(c)];
@@ -122,13 +195,13 @@ void SuffixArray::make_sorted_first() {
 
     // giving initial classes to the positions
     int current_class = 0;
-    classes_equal[class_index][sorted_suffix[0]] = current_class;
+    classes_equal[0] = current_class;
     for(int i = 1; i < sorted_suffix.size(); i++) {
         if(index_char(work_string[sorted_suffix[i]]) == index_char(work_string[sorted_suffix[i - 1]])) {
-            classes_equal[class_index][sorted_suffix[i]] = current_class;
+            classes_equal[sorted_suffix[i]] = current_class;
         }
         else {
-            classes_equal[class_index][sorted_suffix[i]] = ++current_class;
+            classes_equal[sorted_suffix[i]] = ++current_class;
         }
     }
     classes_number = current_class + 1;
@@ -144,7 +217,7 @@ void SuffixArray::sort_group(int step) {
     vector<int> group(sorted_suffix.size(), -1);
 
     vector<int> classes(classes_number, 0);
-    for(auto j : classes_equal[class_index]) {
+    for(auto j : classes_equal) {
         ++classes[j];
     }
 
@@ -154,44 +227,29 @@ void SuffixArray::sort_group(int step) {
 
     for(int i = sorted_suffix.size() - 1; i > - 1; i--) {
         int prev = step_left(sorted_suffix[i], step);
-        group[--classes[classes_equal[class_index][prev]]] = prev;
+        group[--classes[classes_equal[prev]]] = prev;
     }
 
+    vector<int> new_classes_equal(sorted_suffix.size(), 0);
     int new_classes_number = 1;
-    int old_class1 = classes_equal[class_index][group[0]];
-    int old_class2 = classes_equal[class_index][step_right(group[0], step)];
-    classes_equal[class_index + 1][group[0]] = 0;
+    int old_class1 = classes_equal[group[0]];
+    int old_class2 = classes_equal[step_right(group[0], step)];
     for(int i = 1; i < group.size(); i++) {
-        int class1 = classes_equal[class_index][group[i]];
-        int class2 = classes_equal[class_index][step_right(group[i], step)];
+        int class1 = classes_equal[group[i]];
+        int class2 = classes_equal[step_right(group[i], step)];
         if(class1 == old_class1 && class2 == old_class2) {
-            classes_equal[class_index + 1][group[i]] = new_classes_number - 1;
+            new_classes_equal[group[i]] = new_classes_number - 1;
         }
         else {
-            classes_equal[class_index + 1][group[i]] = new_classes_number;
+            new_classes_equal[group[i]] = new_classes_number;
             ++new_classes_number;
         }
         old_class1 = class1;
         old_class2 = class2;
     }
     sorted_suffix = group;
-    ++class_index;
+    classes_equal = new_classes_equal;
     classes_number = new_classes_number;
-}
-
-int SuffixArray::lcp(int fst, int scd) {
-    int check_class = power2;
-    int answer = 0;
-    while(check_class > -1) {
-        if(classes_equal[check_class][fst] == classes_equal[check_class][scd]) {
-            int step = 1 << check_class;
-            answer += step;
-            fst = step_right(fst, step);
-            scd = step_right(scd, step);
-        }
-        --check_class;
-    }
-    return answer;
 }
 
 // function to give indices to the symbols
@@ -215,8 +273,8 @@ int main() {
     string concat = a + '?' + b + "#";
     SuffixArray conc(concat, '#');
 
-    size_t a_end_size = a.length() + 1;
-    size_t b_end_size = conc.real_size() - a.length() - 1;
+    int a_end_size = a.length() + 1;
+    int b_end_size = conc.real_size() - a.length() - 1;
 
     vector <int> a_suf(a_end_size);
     vector <int> b_suf(b_end_size);
