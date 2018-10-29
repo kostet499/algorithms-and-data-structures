@@ -2,38 +2,9 @@
 #include <vector>
 #include <unordered_map>
 
-using namespace std; 
+using namespace std;
 
 class Trie {
-    // (vertex, char)[keyd into 1 int] -> (son of vertex by char)
-    unordered_map<int, int> edges;
-    // char of edge to the vertex
-    vector<char> char_edges;
-    vector<int> parents;
-    vector<vector<int> > indices;
-    int terminal_index;
-    int last_index;
-
-    void add_str(const string &pattern) {
-        if(!pattern.length()) {
-            return;
-        }
-        int i = 0;
-        for(auto &c : pattern) {
-            int key = encode(i, c);
-            if(edges.find(key) == edges.end()) {
-                edges[key] = last_index;
-                char_edges.emplace_back(c);
-                indices.emplace_back(vector<int>());
-                parents.emplace_back(i);
-                i = last_index++;
-            }
-            else {
-                i = edges[key];
-            }
-        }
-        indices[i].emplace_back(terminal_index++);
-    }
 
 public:
     Trie(const vector<string> &pattern_list) {
@@ -50,7 +21,7 @@ public:
     }
 
     //getters
-    bool is_terminal(int i) {
+    bool is_terminal(int i) const {
         return static_cast<bool>(indices[i].size());
     }
 
@@ -79,23 +50,61 @@ public:
     int encode(int vertex, char c) const {
         return (vertex << 15) + static_cast<unsigned int>(c);
     }
+
+private:
+    void add_str(const string &pattern) {
+        if(!pattern.length()) {
+            return;
+        }
+        int i = 0;
+        for(auto &c : pattern) {
+            int key = encode(i, c);
+            if(edges.find(key) == edges.end()) {
+                edges[key] = last_index;
+                char_edges.emplace_back(c);
+                indices.emplace_back();
+                parents.emplace_back(i);
+                i = last_index++;
+            }
+            else {
+                i = edges[key];
+            }
+        }
+        indices[i].emplace_back(terminal_index++);
+    }
+
+private:
+    // (vertex, char)[keyd into 1 int] -> (son of vertex by char)
+    unordered_map<int, int> edges;
+    // char of edge to the vertex
+    vector<char> char_edges;
+    vector<int> parents;
+    vector<vector<int> > indices;
+    int terminal_index;
+    int last_index;
 };
 
 class Automate {
-    vector<int> suffix_values;
-    vector<int> terminal_values;
-    // transit - transitional function
-    unordered_map<int, int> transit_table;
-    Trie *trie;
-    // [current] state [of the automate] - number of some vertex
-    int state = 0;
-    // it compresses the results given by terminal[suffix link] function
-    vector<vector<int> > compressor;
-    vector<bool> visited;
 
+public:
+    Automate(Trie &trie1) {
+        trie = &trie1;
+        suffix_values.resize(trie->get_size(), -1);
+        terminal_values.resize(trie->get_size(), -1);
+        compressor.resize(trie->get_size());
+        visited.resize(trie->get_size(), false);
+        suffix_values[0] = 0;
+    }
+
+    const vector<int> &process_symbol(char c) {
+        state = transit(state, c);
+        return get_result(state);
+    }
+
+private:
     int suffix_link(int vertex) {
         if(suffix_values[vertex] != -1) {
-            return suffix_values[vertex]; 
+            return suffix_values[vertex];
         }
         int parent = trie->get_parent(vertex);
         if(!parent) {
@@ -138,39 +147,35 @@ class Automate {
     }
 
     // uses previous results to figure out the result for current request
-    vector<int>* get_result(int vertex) {
+    const vector<int> &get_result(int vertex) {
         if(visited[vertex]) {
-            return &compressor[vertex];
+            return compressor[vertex];
         }
         visited[vertex] = true;
-        compressor[vertex] = *get_result(terminal(vertex));
-        for(auto &i : trie->get_terminal_indices(vertex)) {
+        compressor[vertex] = get_result(terminal(vertex));
+        for(auto i : trie->get_terminal_indices(vertex)) {
             compressor[vertex].emplace_back(i);
         }
-        return &compressor[vertex];
+        return compressor[vertex];
     }
 
-public:
-    Automate(Trie &trie1) {
-        trie = &trie1;
-        suffix_values.resize(trie->get_size(), -1);
-        terminal_values.resize(trie->get_size(), -1);
-        compressor.resize(trie->get_size());
-        visited.resize(trie->get_size(), false);
-        suffix_values[0] = 0;
-    }
-
-    vector<int>* process_symbol(char c) {
-       state = transit(state, c);
-       return get_result(state);
-    }
-
+private:
+    vector<int> suffix_values;
+    vector<int> terminal_values;
+    // transit - transitional function
+    unordered_map<int, int> transit_table;
+    Trie *trie;
+    // [current] state [of the automate] - number of some vertex
+    int state = 0;
+    // it compresses the results given by terminal[suffix link] function
+    vector<vector<int> > compressor;
+    vector<bool> visited;
 };
 
 // splits pattern into a words by symbol
 void split_pattern(string &pattern, vector<string> &word_list, vector<int> &indices, char symbol) {
     int cur = -1;
-    for(int i = 0; i < pattern.length();) {
+    for(size_t i = 0; i < pattern.length();) {
         if(pattern[i] != symbol) {
             ++cur;
             word_list.emplace_back("");
@@ -199,7 +204,7 @@ int main() {
     // indices[j] is a position of the last symbol of pattern number j in the main-pattern
     vector<int> indices;
     split_pattern(pattern, word_list, indices, '?');
-    
+
     int pos = 0;
     Trie bor(word_list);
     Automate mate(bor);
@@ -209,9 +214,9 @@ int main() {
     vector<short int> mappy;
     // determines positions of pattern in the text
     while(cin >> c && c != '#') {
-        vector<int>* list = mate.process_symbol(c);
+        vector<int> list = mate.process_symbol(c);
         mappy.emplace_back(0);
-        for(auto &i : *list) {
+        for(auto i : list) {
             int position = pos - indices[i];
             if(position < 0)
                 continue;
