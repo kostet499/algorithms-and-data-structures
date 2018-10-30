@@ -166,15 +166,7 @@ SuffixArray::SuffixArray(string &build_string, char symbol) {
 }
 
 void SuffixArray::make_work_string(string &build_string) {
-    int len = build_string.length();
-    int new_len = 1;
-    while(new_len < len) {
-        new_len <<= 1;
-    }
     work_string = build_string;
-    for(int i = 0; i < new_len - len; i++) {
-        work_string += symbol_to_fill;
-    }
 }
 
 void SuffixArray::make_sorted_first() {
