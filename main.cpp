@@ -34,6 +34,9 @@ public:
         std::shuffle(point_set.begin(), point_set.end(), generator);
         */
         first_initialization(point_set);
+        for(curr_index = 4; curr_index < point_set.size(); ++curr_index) {
+            add_point(point_set);
+        }
     }
 
 private:
@@ -43,7 +46,6 @@ private:
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
 
-        double comparing_precision = 1e-10;
         double cos_angle = compute_cos_angle(vector_to_point, normal);
         if(std::fabs(cos_angle) < comparing_precision) {
             return 0;
@@ -86,16 +88,33 @@ private:
         not_on_facet.emplace_back(1);
         facet.emplace_back(vector<size_t>({1, 2, 3}));
         not_on_facet.emplace_back(0);
+    }
+
+    void add_point(const vector<point> &point_set) {
+        vector<bool> facet_seen(facet.size(), false);
+        vector<bool> edge_seen(points_count, false);
+        vector<bool> edge_unseen(points_count, false);
 
 
+    }
+
+    size_t code_edge(size_t a, size_t b) const {
+        if(a > b) {
+            std::swap(a, b);
+        }
+        return (a << 15) + b;
+    }
+
+    std::pair<size_t, size_t> decode(size_t encoded_value)  const {
+        return std::make_pair(encoded_value >> 15, encoded_value & ((1 << 15) - 1));
     }
 
     point compute_vector(const point &a, const point &b) const {
-        return point(b.x - a.x, b.y - a.y, b.z - a.z);
+        return {b.x - a.x, b.y - a.y, b.z - a.z};
     }
 
     point compute_vector_multiply(const point &a, const point &b) const {
-        return point(a.y * b.z - a.z * b.y, -a.x * b.z + a.z * b.x, a.x * b.y - a.y * b.x);
+        return {a.y * b.z - a.z * b.y, -a.x * b.z + a.z * b.x, a.x * b.y - a.y * b.x};
     }
 
     double compute_vector_norm(const point &a) const {
@@ -107,7 +126,13 @@ private:
     }
 
     double compute_cos_angle(const point &a, const point &b) const {
-        return compute_vector_scalar(a, b) / compute_vector_norm(a) / compute_vector_norm(b);
+        double norma = compute_vector_norm(a);
+        double normb = compute_vector_norm(b);
+        // problem oriented condition
+        if(norma < comparing_precision || normb < comparing_precision) {
+            return 0;
+        }
+        return compute_vector_scalar(a, b) / norma / normb;
     }
 
 private:
@@ -115,6 +140,9 @@ private:
     vector<vector<size_t> > point_conflict;
     vector<vector<size_t> > facet_conflict;
     vector<size_t> not_on_facet;
+    size_t curr_index;
+    double comparing_precision = 1e-10;
+    size_t points_count;
 };
 
 
