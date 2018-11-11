@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <random>
 #include <unordered_map>
+#include <queue>
 
 using std::unordered_map;
 using std::vector;
 using std::cout;
 using std::cin;
 using std::endl;
+using std::queue;
 
 struct point {
     double x;
@@ -64,8 +66,15 @@ private:
 
     void add_point(const vector<point> &point_set) {
         vector<bool> facet_seen(facet.size(), false);
+        vector<size_t> free_positions;
         for(size_t i = 0; i < facet.size(); ++i) {
+            if(facet[i].empty()) {
+                continue;
+            }
             facet_seen[i] = is_seen(i, curr_index, point_set);
+            if(facet_seen[i]) {
+                free_positions.emplace_back(i);
+            }
         }
 
     }
@@ -94,23 +103,25 @@ private:
         hardcode_edge(3, 1, 3, 1);
     }
 
-    void hardcode_facet(size_t id1, size_t id2, size_t id3) {
-        facet.emplace_back(vector<size_t>({id1, id2, id3}));
+    size_t hardcode_facet(size_t id1, size_t id2, size_t id3) {
+        if(free_facets.empty()) {
+            facet.emplace_back(vector<size_t>({id1, id2, id3}));
+            return facet.size() - 1;
+        }
+        size_t free_place = free_facets.front();
+        free_facets.pop();
+        facet[free_place] = {id1, id2, id3};
+        return free_place;
     }
 
     void hardcode_edge(size_t id1, size_t id2, size_t facet_id1, size_t facet_id2) {
-        edges[encode(id1, id2)] = encode(facet_id1, facet_id2);
-    }
-
-    size_t encode(size_t a, size_t b) const {
-        if(a > b) {
-            std::swap(a, b);
+        if(free_edges.empty()) {
+            edges.emplace_back(vector<size_t>({id1, id2, facet_id1, facet_id2}));
+            return;
         }
-        return (a << 15) + b;
-    }
-
-    std::pair<size_t, size_t> decode(size_t encoded_value)  const {
-        return std::make_pair(encoded_value >> 15, encoded_value & ((1 << 15) - 1));
+        size_t free_place = free_edges.front();
+        free_edges.pop();
+        edges[free_place] = {id1, id2, facet_id1, facet_id2};
     }
 
     point compute_vector(const point &a, const point &b) const {
@@ -150,7 +161,9 @@ private:
     vector<vector<size_t> > facet;
     size_t curr_index;
     double comparing_precision = 1e-10;
-    unordered_map<size_t, size_t> edges;
+    vector<vector<size_t> > edges;
+    queue<size_t> free_facets;
+    queue<size_t> free_edges;
     // supposed to be a point inside the convex hull
     point super_point;
 };
