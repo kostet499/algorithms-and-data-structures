@@ -101,7 +101,12 @@ private:
         hardcode_facet(2, 3, 0); // facet 2
         hardcode_facet(1, 2, 3); // facet 3
 
-
+        hardcode_edge(0, 1, 0, 1);
+        hardcode_edge(3, 0, 1, 2);
+        hardcode_edge(2, 3, 2, 3);
+        hardcode_edge(1, 2, 3, 0);
+        hardcode_edge(0, 2, 0, 2);
+        hardcode_edge(3, 1, 3, 1);
     }
 
     void hardcode_facet(size_t id1, size_t id2, size_t id3) {
