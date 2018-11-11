@@ -5,6 +5,9 @@
 #ifndef PARTICLEFILTER_PARTICLEFILTER_H
 #define PARTICLEFILTER_PARTICLEFILTER_H
 
+#include "State.h"
+
+
 class ParticleFilter {
 public:
     ParticleFilter();

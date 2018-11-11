@@ -23,4 +23,6 @@ head_angle(head),
 body_angle(body),
 robot_position(robot), ball_position(ball),
 robot_velocity(robot_v),
-ball_velocity(ball_v) {}
+ball_velocity(ball_v) {
+    time = std::chrono::system_clock::now();
+}
