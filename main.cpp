@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <unordered_map>
 #include <queue>
 
 using std::vector;
@@ -9,6 +10,7 @@ using std::cout;
 using std::cin;
 using std::endl;
 using std::queue;
+using std::unordered_map;
 
 struct point {
     double x;
@@ -41,10 +43,18 @@ public:
         }
     }
 
+    void represent_answer() {
+        for(size_t i = 0; i < facet.size(); ++i) {
+            if(facet.empty()) {
+                continue;
+            }
+            cout << 3 << " " << facet[i][0] << " " << facet[i][1] << " " << facet[i][2] << endl;
+        }
+    }
 private:
 
     // bool - only for this task - we have no complanar 4 points
-    short int is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
+    bool is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
         return compute_cos_angle(vector_to_point, normal) > 0;
@@ -80,6 +90,7 @@ private:
         // edge fully seen then deleted
         // edge fully unseen then nothing
         // edge partially seen then it is on the horizon
+        unordered_map<size_t, vector<size_t> > temp;
         for(size_t i = 0; i < edges.size(); ++i) {
             if(edges[i].empty()) {
                 continue;
@@ -95,18 +106,25 @@ private:
             }
             else {
                 size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index);
+                // experimental work with unordered map
+                temp[encode(curr_index, edges[i][0])].emplace_back(new_facet_id);
+                temp[encode(curr_index, edges[i][1])].emplace_back(new_facet_id);
             }
         }
 
+        for(auto &it : temp) {
+            auto edge = decode(it.first);
+            hardcode_edge(edge.first, edge.second, it.second[0], it.second[1]);
+        }
     }
 
     // we hardcode smth
     void first_initialization(const vector<point> &point_set) {
         // experimetal
-        point a = compute_vector_number(point_set[0], 1/3);
-        point b = compute_vector_number(point_set[1], 1/3);
-        point c = compute_vector_number(point_set[2], 1/3);
-        point d = compute_vector_number(point_set[3], 1/2);
+        point a = compute_vector_number(point_set[0], 1.0 / 3);
+        point b = compute_vector_number(point_set[1], 1.0 /3);
+        point c = compute_vector_number(point_set[2], 1.0 /3);
+        point d = compute_vector_number(point_set[3], 1.0 /2);
         super_point = compute_vector_sum(a, b);
         super_point = compute_vector_sum(super_point, c);
         super_point = compute_vector_sum(super_point, d);
@@ -143,6 +161,17 @@ private:
         size_t free_place = free_edges.front();
         free_edges.pop();
         edges[free_place] = {id1, id2, facet_id1, facet_id2};
+    }
+
+    size_t encode(size_t a, size_t b) const {
+        if(a > b) {
+            std::swap(a, b);
+        }
+        return (a << 15) + b;
+    }
+
+    std::pair<size_t, size_t> decode(size_t encoded_value)  const {
+        return std::make_pair(encoded_value >> 15, encoded_value & ((1 << 15) - 1));
     }
 
     point compute_vector(const point &a, const point &b) const {
@@ -196,10 +225,14 @@ int main() {
     for(int i = 0; i < test_number; ++i) {
         int points_number;
         cin >> points_number;
-
+        vector<point> point_set;
         for(int j = 0; j < points_number; ++j) {
-
+            int x, y, z;
+            cin >> x >> y >> z;
+            point_set.emplace_back(point(x, y, z));
         }
+        ConvexHull myhull(point_set);
+        myhull.represent_answer();
     }
     return 0;
 }
