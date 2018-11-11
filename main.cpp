@@ -2,10 +2,8 @@
 #include <vector>
 #include <algorithm>
 #include <random>
-#include <unordered_map>
 #include <queue>
 
-using std::unordered_map;
 using std::vector;
 using std::cout;
 using std::cin;
@@ -64,16 +62,39 @@ private:
         return normal;
     }
 
+    // developing
     void add_point(const vector<point> &point_set) {
         vector<bool> facet_seen(facet.size(), false);
-        vector<size_t> free_positions;
         for(size_t i = 0; i < facet.size(); ++i) {
             if(facet[i].empty()) {
                 continue;
             }
             facet_seen[i] = is_seen(i, curr_index, point_set);
             if(facet_seen[i]) {
-                free_positions.emplace_back(i);
+                facet[i].clear();
+                free_facets.push(i);
+            }
+        }
+
+        // considers 3 cases
+        // edge fully seen then deleted
+        // edge fully unseen then nothing
+        // edge partially seen then it is on the horizon
+        for(size_t i = 0; i < edges.size(); ++i) {
+            if(edges[i].empty()) {
+                continue;
+            }
+            size_t facet_id1 = edges[i][2];
+            size_t facet_id2 = edges[i][3];
+            if(facet_seen[facet_id1] && facet_seen[facet_id2]) {
+                edges[i].clear();
+                free_edges.push(i);
+            }
+            else if(!facet_seen[facet_id1] && !facet_seen[facet_id2]) {
+                continue;
+            }
+            else {
+                size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index);
             }
         }
 
