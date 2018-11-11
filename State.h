@@ -6,8 +6,32 @@
 #define PARTICLEFILTER_STATE_H
 
 
-class State {
+#include <vector>
 
+struct dot {
+    double x;
+    double y;
+
+    dot(double, double);
+    dot();
+};
+
+struct StaticState {
+    double field_width;
+    double field_height;
+    std::vector<dot> static_field_objects;
+    StaticState(double, double, const std::vector<dot> &);
+};
+
+struct DynamicState {
+    double head_angle;
+    double body_angle;
+    dot robot_position;
+    dot ball_position;
+    dot robot_velocity;
+    dot ball_velocity;
+
+    DynamicState(double, double, dot, dot, dot, dot);
 };
 
 
