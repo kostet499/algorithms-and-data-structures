@@ -2,7 +2,9 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <unordered_map>
 
+using std::unordered_map;
 using std::vector;
 using std::cout;
 using std::cin;
@@ -27,7 +29,7 @@ void point::swap(point &a, point &b) {
 
 class ConvexHull {
 public:
-    ConvexHull(const vector<point> &point_set) {
+    ConvexHull(const vector<point> &point_set) : super_point(0, 0, 0){
         /*
         std::random_device rd;
         std::mt19937 generator(rd());
@@ -62,43 +64,55 @@ private:
         point a = point_set[facet[facet_id][0]];
         point b = point_set[facet[facet_id][1]];
         point c = point_set[facet[facet_id][2]];
-        point d = point_set[not_on_facet[facet_id]];
 
         point ab = compute_vector(a, b);
         point ac = compute_vector(a, c);
-        point ad = compute_vector(a, d);
+        point ad = compute_vector(a, super_point);
 
         point normal = compute_vector_multiply(ab, ac);
         if(compute_cos_angle(ad, normal) > 0) {
-            point zero_point = point(0, 0, 0);
-            // normal = (-normal.x, -normal.y, -normal.z)
-            normal = compute_vector(normal, zero_point);
+            normal = compute_vector_number(normal, -1);
         }
 
         return normal;
     }
 
-    // we hardcode smth
-    void first_initialization(const vector<point> &point_set) {
-        facet.emplace_back(vector<size_t>({0, 1, 2}));
-        not_on_facet.emplace_back(3);
-        facet.emplace_back(vector<size_t>({0, 1, 3}));
-        not_on_facet.emplace_back(2);
-        facet.emplace_back(vector<size_t>({0, 2, 3}));
-        not_on_facet.emplace_back(1);
-        facet.emplace_back(vector<size_t>({1, 2, 3}));
-        not_on_facet.emplace_back(0);
-    }
-
     void add_point(const vector<point> &point_set) {
         vector<bool> facet_seen(facet.size(), false);
-        vector<bool> edge_seen(points_count, false);
-        vector<bool> edge_unseen(points_count, false);
+        for(size_t i = 0; i < facet.size(); ++i) {
+            facet_seen[i] = is_seen(i, curr_index, point_set);
+
+        }
+    }
+
+    // we hardcode smth
+    void first_initialization(const vector<point> &point_set) {
+        // experimetal
+        point a = compute_vector_number(point_set[0], 1/3);
+        point b = compute_vector_number(point_set[1], 1/3);
+        point c = compute_vector_number(point_set[2], 1/3);
+        point d = compute_vector_number(point_set[3], 1/2);
+        super_point = compute_vector_sum(a, b);
+        super_point = compute_vector_sum(super_point, c);
+        super_point = compute_vector_sum(super_point, d);
+
+        hardcode_facet(0, 1, 2); // facet 0
+        hardcode_facet(3, 0, 1); // facet 1
+        hardcode_facet(2, 3, 0); // facet 2
+        hardcode_facet(1, 2, 3); // facet 3
 
 
     }
 
-    size_t code_edge(size_t a, size_t b) const {
+    void hardcode_facet(size_t id1, size_t id2, size_t id3) {
+        facet.emplace_back(vector<size_t>({id1, id2, id3}));
+    }
+
+    void hardcode_edge(size_t id1, size_t id2, size_t facet_id1, size_t facet_id2) {
+        edges[encode(id1, id2)] = encode(facet_id1, facet_id2);
+    }
+
+    size_t encode(size_t a, size_t b) const {
         if(a > b) {
             std::swap(a, b);
         }
@@ -113,10 +127,17 @@ private:
         return {b.x - a.x, b.y - a.y, b.z - a.z};
     }
 
+    point compute_vector_sum(const point &a, const point &b) const {
+        return {b.x + a.x, b.y + a.y, b.z + a.z};
+    }
+
     point compute_vector_multiply(const point &a, const point &b) const {
         return {a.y * b.z - a.z * b.y, -a.x * b.z + a.z * b.x, a.x * b.y - a.y * b.x};
     }
 
+    point compute_vector_number(const point &a, double number) const {
+        return {a.x * number, a.y * number, a.z * number};
+    }
     double compute_vector_norm(const point &a) const {
         return sqrt(pow(a.x, 2) + pow(a.y, 2) + pow(a.z, 2));
     }
@@ -137,12 +158,11 @@ private:
 
 private:
     vector<vector<size_t> > facet;
-    vector<vector<size_t> > point_conflict;
-    vector<vector<size_t> > facet_conflict;
-    vector<size_t> not_on_facet;
     size_t curr_index;
     double comparing_precision = 1e-10;
-    size_t points_count;
+    unordered_map<size_t, size_t> edges;
+    // supposed to be a point inside the convex hull
+    point super_point;
 };
 
 
