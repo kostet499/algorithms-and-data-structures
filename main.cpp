@@ -57,9 +57,8 @@ private:
 
         point normal = compute_vector_multiply(ab, ac);
         if(compute_cos_angle(ad, normal) > 0) {
-            normal = compute_vector_number(normal, -1);
+            return compute_vector_number(normal, -1);
         }
-
         return normal;
     }
 
