@@ -51,13 +51,9 @@ private:
     }
 
     point outside_normal(size_t facet_id, const vector<point> &point_set) const {
-        point a = point_set[facet[facet_id][0]];
-        point b = point_set[facet[facet_id][1]];
-        point c = point_set[facet[facet_id][2]];
-
-        point ab = compute_vector(a, b);
-        point ac = compute_vector(a, c);
-        point ad = compute_vector(a, super_point);
+        point ab = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][1]]);
+        point ac = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][2]]);
+        point ad = compute_vector(point_set[facet[facet_id][0]], super_point);
 
         point normal = compute_vector_multiply(ab, ac);
         if(compute_cos_angle(ad, normal) > 0) {
