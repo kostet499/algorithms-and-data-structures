@@ -4,6 +4,5 @@
 
 #include "ParticleFilter.h"
 
-ParticleFilter::ParticleFilter() {
+ParticleFilter::ParticleFilter(const StaticState &f) : field(f) {}
 
-}

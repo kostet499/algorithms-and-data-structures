@@ -10,13 +10,14 @@
 
 class ParticleFilter {
 public:
-    ParticleFilter();
+    ParticleFilter(const StaticState &);
 
 private:
-
+    std::vector<DynamicState> motion_model();
 
 private:
-
+    StaticState field;
+    std::vector<DynamicState> particles;
 };
 
 
