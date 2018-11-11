@@ -43,21 +43,11 @@ public:
 
 private:
 
-    // -1 - not seen, 0 - in same plane, 1 - seen
+    // bool - only for this task - we have no complanar 4 points
     short int is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
-
-        double cos_angle = compute_cos_angle(vector_to_point, normal);
-        if(std::fabs(cos_angle) < comparing_precision) {
-            return 0;
-        }
-        else if(cos_angle < 0) {
-            return -1;
-        }
-        else {
-            return 1;
-        }
+        return compute_cos_angle(vector_to_point, normal) > 0;
     }
 
     point outside_normal(size_t facet_id, const vector<point> &point_set) const {
@@ -81,8 +71,8 @@ private:
         vector<bool> facet_seen(facet.size(), false);
         for(size_t i = 0; i < facet.size(); ++i) {
             facet_seen[i] = is_seen(i, curr_index, point_set);
-
         }
+
     }
 
     // we hardcode smth
