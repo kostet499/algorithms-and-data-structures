@@ -5,19 +5,18 @@
 #ifndef PARTICLEFILTER_PARTICLEFILTER_H
 #define PARTICLEFILTER_PARTICLEFILTER_H
 
-#include "State.h"
+#include "JsonField.h"
 
 
 class ParticleFilter {
 public:
-    ParticleFilter(const StaticState &);
+    explicit ParticleFilter(const JsonField &);
 
 private:
-    std::vector<DynamicState> motion_model();
+    //std::vector<DynamicState> motion_model();
 
 private:
-    StaticState field;
-    std::vector<DynamicState> particles;
+    JsonField field;
 };
 
 

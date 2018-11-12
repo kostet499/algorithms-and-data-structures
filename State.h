@@ -8,13 +8,7 @@
 #include <vector>
 #include <chrono>
 
-struct dot {
-    double x;
-    double y;
 
-    dot(double, double);
-    dot();
-};
 
 struct StaticState {
     double field_width;
@@ -25,15 +19,10 @@ struct StaticState {
 };
 
 struct DynamicState {
-    double head_angle;
     double body_angle;
-    dot robot_position;
-    dot ball_position;
-    dot robot_velocity;
-    dot ball_velocity;
-    std::chrono::_V2::system_clock::time_point time;
+    dot robot;
 
-    DynamicState(double, double, dot, dot, dot, dot);
+    DynamicState(double, dot);
 };
 
 

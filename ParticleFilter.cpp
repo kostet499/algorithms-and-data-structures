@@ -4,5 +4,5 @@
 
 #include "ParticleFilter.h"
 
-ParticleFilter::ParticleFilter(const StaticState &f) : field(f) {}
+ParticleFilter::ParticleFilter(const JsonField &f) : field(f) {}
 
