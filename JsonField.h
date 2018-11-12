@@ -6,6 +6,7 @@
 #define ALGOS_JSONFIELD_H
 
 #include "vector"
+#include <math.h>
 
 struct dot {
     double x;
@@ -13,6 +14,7 @@ struct dot {
 
     dot(double, double);
     dot();
+    double norm();
 };
 
 class JsonField {

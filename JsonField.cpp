@@ -46,3 +46,7 @@ double JsonField::width() const {
 double JsonField::height() const {
     return field_height;
 }
+
+double dot::norm() {
+    return std::sqrt(pow(x, 2) + pow(y, 2));
+}

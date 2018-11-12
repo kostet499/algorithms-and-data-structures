@@ -13,11 +13,24 @@ void ParticleFilter::PassNewVelocity(dot new_velocity) {
     auto current_time = std::chrono::system_clock::now();
     std::vector<state> new_particles(particles.size());
 
+    // параметры, которые мы вольны менять
+    double sigma_shift = 0.5;
+    double sigma_angle = 0.5;
+    const unsigned int generator_seed = static_cast<const unsigned  int> (current_time.time_since_epoch().count());
+
+
     // радиус вектор перемещения в системе отсчёта робота
     dot shift = Motion(current_time, new_velocity);
-    // code ...
+
+    boost::taus88 generator(generator_seed);
+    boost::normal_distribution<double> absolute_shift_noise(shift.norm(), sigma_shift);
+    // подумаю еще как представлять направление вектора ...
+    boost::normal_distribution<double> vector_angle_noise(, sigma_angle);
 
 
+    for(const auto &particle : particles) {
+        // code ...
+    }
 
     velocity = new_velocity;
     time = current_time;
