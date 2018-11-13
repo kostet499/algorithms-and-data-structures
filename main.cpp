@@ -31,7 +31,7 @@ public:
         std::sort(facet.begin(), facet.end());
         std::cout << facet.size() - free_facets.size() << endl;
         for(size_t i = 0; i < facet.size(); ++i) {
-            if(facet.empty()) {
+            if(facet[i].empty()) {
                 continue;
             }
             cout << 3 << " " << facet[i][0] << " " << facet[i][1] << " " << facet[i][2] << endl;
@@ -54,8 +54,7 @@ private:
     bool is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
-
-        return compute_vector_scalar(vector_to_point, normal) > comparing_precision;
+        return compute_vector_scalar(vector_to_point, normal) > 0;
     }
 
     point outside_normal(size_t facet_id, const vector<point> &point_set) const {
@@ -207,7 +206,6 @@ private:
 private:
     vector<vector<size_t> > facet;
     size_t curr_index;
-    double comparing_precision = 1e-10;
     vector<vector<size_t> > edges;
     queue<size_t> free_facets;
     queue<size_t> free_edges;
