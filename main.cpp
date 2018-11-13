@@ -16,27 +16,12 @@ struct point {
     double x;
     double y;
     double z;
-
-    point(double v1, double v2, double v3) {
-        x = v1;
-        y = v2;
-        z = v3;
-    }
-
-    void swap(point&, point&);
+    point(double v1, double v2, double v3) : x(v1), y(v2), z(v3){}
 };
-
-void point::swap(point &a, point &b) {
-}
 
 class ConvexHull {
 public:
     ConvexHull(const vector<point> &point_set) : super_point(0, 0, 0){
-        /*
-        std::random_device rd;
-        std::mt19937 generator(rd());
-        std::shuffle(point_set.begin(), point_set.end(), generator);
-        */
         first_initialization(point_set);
         for(curr_index = 4; curr_index < point_set.size(); ++curr_index) {
             add_point(point_set);
@@ -65,27 +50,13 @@ private:
         if(compute_vector_scalar(normal, mult) < 0) {
             std::swap(facet[facet_id][1], facet[facet_id][2]);
         }
-
-        ab = compute_vector(point_set[facet[facet_id][2]], point_set[facet[facet_id][0]]);
-        ac = compute_vector(point_set[facet[facet_id][2]], point_set[facet[facet_id][1]]);
-        mult = compute_vector_multiply(ab, ac);
-        if(compute_vector_scalar(normal, mult) < 0) {
-            std::swap(facet[facet_id][0], facet[facet_id][1]);
-        }
-
-        ab = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][1]]);
-        ac = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][2]]);
-        mult = compute_vector_multiply(ab, ac);
-        if(compute_vector_scalar(normal, mult) < 0) {
-            std::swap(facet[facet_id][1], facet[facet_id][2]);
-        }
     }
 
     // bool - only for this task - we have no complanar 4 points
     bool is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
-        return compute_cos_angle(vector_to_point, normal) > 0;
+        return compute_cos_angle(vector_to_point, normal) > comparing_precision;
     }
 
     point outside_normal(size_t facet_id, const vector<point> &point_set) const {
