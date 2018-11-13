@@ -13,9 +13,7 @@ using std::queue;
 using std::unordered_map;
 
 struct point {
-    double x;
-    double y;
-    double z;
+    double x, y, z;
     point(double v1, double v2, double v3) : x(v1), y(v2), z(v3){}
 };
 
@@ -57,7 +55,7 @@ private:
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
 
-        return compute_cos_angle(vector_to_point, normal) > comparing_precision;
+        return compute_vector_scalar(vector_to_point, normal) > comparing_precision;
     }
 
     point outside_normal(size_t facet_id, const vector<point> &point_set) const {
@@ -66,7 +64,7 @@ private:
         point ad = compute_vector(point_set[facet[facet_id][0]], super_point);
 
         point normal = compute_vector_multiply(ab, ac);
-        if(compute_cos_angle(ad, normal) > 0) {
+        if(compute_vector_scalar(ad, normal) > 0) {
             return compute_vector_number(normal, -1);
         }
         return normal;
@@ -201,16 +199,9 @@ private:
     point compute_vector_number(const point &a, double number) const {
         return {a.x * number, a.y * number, a.z * number};
     }
-    double compute_vector_norm(const point &a) const {
-        return sqrt(pow(a.x, 2) + pow(a.y, 2) + pow(a.z, 2));
-    }
 
     double compute_vector_scalar(const point &a, const point &b) const {
         return a.x * b.x + a.y * b.y + a.z * b.z;
-    }
-
-    double compute_cos_angle(const point &a, const point &b) const {
-        return compute_vector_scalar(a, b) / compute_vector_norm(a) / compute_vector_norm(b);
     }
 
 private:
