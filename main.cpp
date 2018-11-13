@@ -56,6 +56,7 @@ private:
     bool is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
         point normal = outside_normal(facet_id, point_set);
         point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
+
         return compute_cos_angle(vector_to_point, normal) > comparing_precision;
     }
 
@@ -65,6 +66,11 @@ private:
         point ad = compute_vector(point_set[facet[facet_id][0]], super_point);
 
         point normal = compute_vector_multiply(ab, ac);
+        // filthy bug place found
+        if(compute_vector_norm(normal) < comparing_precision) {
+            throw;
+        }
+
         if(compute_cos_angle(ad, normal) > 0) {
             return compute_vector_number(normal, -1);
         }
@@ -203,13 +209,7 @@ private:
     }
 
     double compute_cos_angle(const point &a, const point &b) const {
-        double norma = compute_vector_norm(a);
-        double normb = compute_vector_norm(b);
-        // problem oriented condition
-        if(norma < comparing_precision || normb < comparing_precision) {
-            return 0;
-        }
-        return compute_vector_scalar(a, b) / norma / normb;
+        return compute_vector_scalar(a, b) / compute_vector_norm(a) / compute_vector_norm(b);
     }
 
 private:
