@@ -54,16 +54,21 @@ public:
 private:
 
     // bool - only for this task - we have no complanar 4 points
-    // to work on
     bool is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
-        point normal_vec = normal(facet_id, point_set);
-
+        point normal = outside_normal(facet_id, point_set);
+        point vector_to_point = compute_vector(point_set[facet[facet_id][0]], point_set[point_id]);
+        return compute_cos_angle(vector_to_point, normal) > 0;
     }
 
-    point normal(size_t facet_id, const vector<point> &point_set) const {
+    point outside_normal(size_t facet_id, const vector<point> &point_set) const {
         point ab = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][1]]);
         point ac = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][2]]);
+        point ad = compute_vector(point_set[facet[facet_id][0]], super_point);
+
         point normal = compute_vector_multiply(ab, ac);
+        if(compute_cos_angle(ad, normal) > 0) {
+            return compute_vector_number(normal, -1);
+        }
         return normal;
     }
 
@@ -116,10 +121,10 @@ private:
     // we hardcode smth
     void first_initialization(const vector<point> &point_set) {
         // experimetal
-        point a = compute_vector_number(point_set[0], 1.0 / 3);
-        point b = compute_vector_number(point_set[1], 1.0 /3);
-        point c = compute_vector_number(point_set[2], 1.0 /3);
-        point d = compute_vector_number(point_set[3], 1.0 /2);
+        point a = compute_vector_number(point_set[0], 1.0 / 4);
+        point b = compute_vector_number(point_set[1], 1.0 / 4);
+        point c = compute_vector_number(point_set[2], 1.0 / 4);
+        point d = compute_vector_number(point_set[3], 1.0 / 4);
         super_point = compute_vector_sum(a, b);
         super_point = compute_vector_sum(super_point, c);
         super_point = compute_vector_sum(super_point, d);
