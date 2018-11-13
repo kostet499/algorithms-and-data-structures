@@ -44,6 +44,9 @@ public:
     }
 
     void represent_answer() {
+        // experimental sort
+        std::sort(facet.begin(), facet.end());
+        std::cout << facet.size() - free_facets.size() << endl;
         for(size_t i = 0; i < facet.size(); ++i) {
             if(facet.empty()) {
                 continue;
@@ -52,6 +55,31 @@ public:
         }
     }
 private:
+    // hard thing
+    void sort_facet(size_t facet_id, const vector<point> &point_set) {
+        std::sort(facet[facet_id].begin(), facet[facet_id].end());
+        point normal = outside_normal(facet_id, point_set);
+        point ab = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][1]]);
+        point ac = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][2]]);
+        point mult = compute_vector_multiply(ab, ac);
+        if(compute_vector_scalar(normal, mult) < 0) {
+            std::swap(facet[facet_id][1], facet[facet_id][2]);
+        }
+
+        ab = compute_vector(point_set[facet[facet_id][2]], point_set[facet[facet_id][0]]);
+        ac = compute_vector(point_set[facet[facet_id][2]], point_set[facet[facet_id][1]]);
+        mult = compute_vector_multiply(ab, ac);
+        if(compute_vector_scalar(normal, mult) < 0) {
+            std::swap(facet[facet_id][0], facet[facet_id][1]);
+        }
+
+        ab = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][1]]);
+        ac = compute_vector(point_set[facet[facet_id][0]], point_set[facet[facet_id][2]]);
+        mult = compute_vector_multiply(ab, ac);
+        if(compute_vector_scalar(normal, mult) < 0) {
+            std::swap(facet[facet_id][1], facet[facet_id][2]);
+        }
+    }
 
     // bool - only for this task - we have no complanar 4 points
     bool is_seen(size_t facet_id, size_t point_id, const vector<point> &point_set) const {
@@ -105,7 +133,7 @@ private:
                 continue;
             }
             else {
-                size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index);
+                size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index, point_set);
                 // experimental work with unordered map
                 temp[encode(curr_index, edges[i][0])].emplace_back(new_facet_id);
                 temp[encode(curr_index, edges[i][1])].emplace_back(new_facet_id);
@@ -129,10 +157,10 @@ private:
         super_point = compute_vector_sum(super_point, c);
         super_point = compute_vector_sum(super_point, d);
 
-        hardcode_facet(0, 1, 2); // facet 0
-        hardcode_facet(3, 0, 1); // facet 1
-        hardcode_facet(2, 3, 0); // facet 2
-        hardcode_facet(1, 2, 3); // facet 3
+        hardcode_facet(0, 1, 2, point_set); // facet 0
+        hardcode_facet(3, 0, 1, point_set); // facet 1
+        hardcode_facet(2, 3, 0, point_set); // facet 2
+        hardcode_facet(1, 2, 3, point_set); // facet 3
 
         hardcode_edge(0, 1, 0, 1);
         hardcode_edge(3, 0, 1, 2);
@@ -142,14 +170,16 @@ private:
         hardcode_edge(3, 1, 3, 1);
     }
 
-    size_t hardcode_facet(size_t id1, size_t id2, size_t id3) {
+    size_t hardcode_facet(size_t id1, size_t id2, size_t id3, const vector<point> &point_set) {
         if(free_facets.empty()) {
             facet.emplace_back(vector<size_t>({id1, id2, id3}));
+            sort_facet(facet.size() - 1, point_set);
             return facet.size() - 1;
         }
         size_t free_place = free_facets.front();
         free_facets.pop();
         facet[free_place] = {id1, id2, id3};
+        sort_facet(free_place, point_set);
         return free_place;
     }
 
