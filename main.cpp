@@ -66,11 +66,6 @@ private:
         point ad = compute_vector(point_set[facet[facet_id][0]], super_point);
 
         point normal = compute_vector_multiply(ab, ac);
-        // filthy bug place found
-        if(compute_vector_norm(normal) < comparing_precision) {
-            throw;
-        }
-
         if(compute_cos_angle(ad, normal) > 0) {
             return compute_vector_number(normal, -1);
         }
@@ -96,6 +91,7 @@ private:
         // edge fully unseen then nothing
         // edge partially seen then it is on the horizon
         unordered_map<size_t, size_t> temp;
+        vector<vector<size_t> > new_edges;
         for(size_t i = 0; i < edges.size(); ++i) {
             if(edges[i].empty()) {
                 continue;
@@ -115,19 +111,24 @@ private:
                 size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index, point_set);
                 // experimental work with unordered map
                 if(temp.find(encode(curr_index, edges[i][0])) != temp.end()) {
-                    hardcode_edge(curr_index, edges[i][0], temp[encode(curr_index, edges[i][0])], new_facet_id);
+                    new_edges.emplace_back(vector<size_t>({curr_index, edges[i][0], temp[encode(curr_index, edges[i][0])], new_facet_id}));
                 }
                 else {
                     temp[encode(curr_index, edges[i][0])] = new_facet_id;
                 }
 
                 if(temp.find(encode(curr_index, edges[i][1])) != temp.end()) {
-                    hardcode_edge(curr_index, edges[i][1], temp[encode(curr_index, edges[i][1])], new_facet_id);
+                    new_edges.emplace_back(vector<size_t>({curr_index, edges[i][1], temp[encode(curr_index, edges[i][1])], new_facet_id}));
                 }
                 else {
                     temp[encode(curr_index, edges[i][1])] = new_facet_id;
                 }
             }
+
+        }
+
+        for(const auto &vec : new_edges) {
+            hardcode_edge(vec[0], vec[1], vec[2], vec[3]);
         }
     }
 
