@@ -118,7 +118,7 @@ private:
         // edge fully seen then deleted
         // edge fully unseen then nothing
         // edge partially seen then it is on the horizon
-        unordered_map<size_t, vector<size_t> > temp;
+        unordered_map<size_t, size_t> temp;
         for(size_t i = 0; i < edges.size(); ++i) {
             if(edges[i].empty()) {
                 continue;
@@ -133,16 +133,24 @@ private:
                 continue;
             }
             else {
+                edges[i].clear();
+                free_edges.push(i);
                 size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index, point_set);
                 // experimental work with unordered map
-                temp[encode(curr_index, edges[i][0])].emplace_back(new_facet_id);
-                temp[encode(curr_index, edges[i][1])].emplace_back(new_facet_id);
-            }
-        }
+                if(temp.find(encode(curr_index, edges[i][0])) != temp.end()) {
+                    hardcode_edge(curr_index, edges[i][0], temp[encode(curr_index, edges[i][0])], new_facet_id);
+                }
+                else {
+                    temp[encode(curr_index, edges[i][0])] = new_facet_id;
+                }
 
-        for(auto &it : temp) {
-            auto edge = decode(it.first);
-            hardcode_edge(edge.first, edge.second, it.second[0], it.second[1]);
+                if(temp.find(encode(curr_index, edges[i][1])) != temp.end()) {
+                    hardcode_edge(curr_index, edges[i][1], temp[encode(curr_index, edges[i][1])], new_facet_id);
+                }
+                else {
+                    temp[encode(curr_index, edges[i][1])] = new_facet_id;
+                }
+            }
         }
     }
 
@@ -198,10 +206,6 @@ private:
             std::swap(a, b);
         }
         return (a << 15) + b;
-    }
-
-    std::pair<size_t, size_t> decode(size_t encoded_value)  const {
-        return std::make_pair(encoded_value >> 15, encoded_value & ((1 << 15) - 1));
     }
 
     point compute_vector(const point &a, const point &b) const {
