@@ -1,16 +1,10 @@
+#include <algorithm>
 #include <iostream>
 #include <vector>
-#include <algorithm>
-#include <random>
 #include <unordered_map>
 #include <queue>
 
 using std::vector;
-using std::cout;
-using std::cin;
-using std::endl;
-using std::queue;
-using std::unordered_map;
 
 struct point {
     double x, y, z;
@@ -34,7 +28,7 @@ public:
             if(facet[i].empty()) {
                 continue;
             }
-            cout << 3 << " " << facet[i][0] << " " << facet[i][1] << " " << facet[i][2] << endl;
+            std::cout << 3 << " " << facet[i][0] << " " << facet[i][1] << " " << facet[i][2] << std::endl;
         }
     }
 private:
@@ -87,7 +81,7 @@ private:
         // edge fully seen then deleted
         // edge fully unseen then nothing
         // edge partially seen then it is on the horizon
-        unordered_map<size_t, size_t> temp;
+        std::unordered_map<size_t, size_t> temp;
         vector<vector<size_t> > new_edges;
         for(size_t i = 0; i < edges.size(); ++i) {
             if(edges[i].empty()) {
@@ -207,8 +201,8 @@ private:
     vector<vector<size_t> > facet;
     size_t curr_index;
     vector<vector<size_t> > edges;
-    queue<size_t> free_facets;
-    queue<size_t> free_edges;
+    std::queue<size_t> free_facets;
+    std::queue<size_t> free_edges;
     // supposed to be a point inside the convex hull
     point super_point;
 };
@@ -216,14 +210,14 @@ private:
 
 int main() {
     int test_number;
-    cin >> test_number;
+    std::cin >> test_number;
     for(int i = 0; i < test_number; ++i) {
         int points_number;
-        cin >> points_number;
+        std::cin >> points_number;
         vector<point> point_set;
         for(int j = 0; j < points_number; ++j) {
             int x, y, z;
-            cin >> x >> y >> z;
+            std::cin >> x >> y >> z;
             point_set.emplace_back(point(x, y, z));
         }
         ConvexHull myhull(point_set);
@@ -231,3 +225,4 @@ int main() {
     }
     return 0;
 }
+// 228 beach
