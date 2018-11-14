@@ -23,7 +23,7 @@ public:
     void represent_answer() {
         // experimental sort
         std::sort(facet.begin(), facet.end());
-        std::cout << facet.size() - free_facets.size() << endl;
+        std::cout << facet.size() - free_facets.size() << std::endl;
         for(size_t i = 0; i < facet.size(); ++i) {
             if(facet[i].empty()) {
                 continue;
