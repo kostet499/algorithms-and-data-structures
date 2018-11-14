@@ -62,10 +62,7 @@ private:
     point outside_normal(size_t facet_id, const vector<point> &point_set) const {
         point ab = point_set[facet[facet_id][1]] - point_set[facet[facet_id][0]];
         point ac = point_set[facet[facet_id][2]] - point_set[facet[facet_id][0]];
-        if((super_point - point_set[facet[facet_id][0]])(ab[ac]) > 0) {
-            return ac[ab];
-        }
-        return ab[ac];
+        return (super_point - point_set[facet[facet_id][0]])(ab[ac]) > 0 ? ac[ab] : ab[ac];
     }
 
     void add_point(const vector<point> &point_set) {
