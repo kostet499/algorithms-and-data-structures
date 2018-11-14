@@ -105,12 +105,7 @@ private:
             else {
                 size_t new_facet_id = hardcode_facet(edges[i][0], edges[i][1], curr_index, point_set);
                 edges[i][2] = new_facet_id;
-                if(facet_seen[facet_id1]) {
-                    edges[i][3] = facet_id1;
-                }
-                else {
-                    edges[i][3] = facet_id2;
-                };
+                edges[i][3] = facet_seen[facet_id2] ? facet_id1 : facet_id2;
                 // experimental work with unordered map
                 if(temp.find(encode(curr_index, edges[i][0])) != temp.end()) {
                     new_edges.emplace_back(vector<size_t>({curr_index, edges[i][0], temp[encode(curr_index, edges[i][0])], new_facet_id}));
