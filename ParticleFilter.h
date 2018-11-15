@@ -13,11 +13,11 @@
 #include <cmath>
 
 struct state {
-    double x, y;
+    dot position;
     // угол оси OY робота с глобальной осью OY, робот "смотрит" без поворота головы вдоль своей OY
     double angle;
 
-    state(double, double, double);
+    state(dot, double);
     state();
 };
 
@@ -28,13 +28,14 @@ public:
     void PassNewVelocity(dot velocity);
     void PassNewVision(const char *filename);
 private:
-    dot Motion(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const;
-    double score_line(const line &a, const line &b) const;
-    double line_angle(const line &a, const line &b) const;
-    double angle(const dot &a, const dot &b) const;
-    double angle_penalty(double angle) const;
-    double distance_penalty(double distance) const;
-    double line_distance(const line &a, const line &b) const;
+    dot ComputeShift(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const;
+    double ScoreLine(const line &a, const line &b) const;
+    double LineAngle(const line &a, const line &b) const;
+    double ComputeAngle(const dot &a, const dot &b) const;
+    double AnglePenalty(double angle) const;
+    double DistancePenalty(double distance) const;
+    double LineDistance(const line &a, const line &b) const;
+    void SetToNewSystem(const state &particle, dot &object) const;
 private:
     JsonField field;
     std::vector<state> particles;

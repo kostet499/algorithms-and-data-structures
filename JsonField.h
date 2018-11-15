@@ -14,7 +14,18 @@ struct dot {
 
     dot(double, double);
     dot();
-    double norm();
+    double norm() const {
+        return std::sqrt(pow(x, 2) + pow(y, 2));
+    }
+    dot operator+(const dot& a) const {
+        return {this->x + a.x, this->y + a.y};
+    }
+    dot operator-(const dot& a) const {
+        return {this->x - a.x, this->y - a.y};
+    }
+    dot operator*(double number) const {
+        return {this->x * number, this->y * number};
+    }
 };
 
 using line = std::pair<dot, dot>;
