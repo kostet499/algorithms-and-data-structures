@@ -43,7 +43,11 @@ void ParticleFilter::PassNewVelocity(dot new_velocity) {
 
     boost::normal_distribution<double> vector_angle_noise(angle(OY, shift), sigma_angle);
 
-    for(const auto &particle : particles) {
+    for(size_t i = 0; i < particles.size(); ++i) {
+        double angle = vector_angle_noise(generator);
+        double absolute_shift = absolute_shift_noise(generator);
+        particles[i].x += absolute_shift * cos(angle);
+        particles[i].y += absolute_shift * sin(angle);
     }
 
     velocity = new_velocity;
