@@ -11,8 +11,12 @@ ParticleFilter::ParticleFilter(const JsonField &f) : field(f) {}
 
 void ParticleFilter::PassNewVision(const char *filename) {
     JsonObjectsSeen objects(filename);
+    std::vector<double> weights(particles.size());
     // мы должны сопоставить линии, которые мы видим линиям поля
-    
+
+    // сначала нужно перейти от систем координат робота к новым координатам
+    // для этого нужно сделать параллельный перенос и поворот системы координат
+
 }
 
 // угол между векторами
@@ -34,7 +38,10 @@ double ParticleFilter::line_angle(const line &a, const line &b) const {
     return atan2(two, one);
 }
 
-// расстояние между линиями
+// не расстояние между линиями!
+// это модуль разности расстояния от одной линии до робота и от другой линии до робота!
+// расстояние от линии до робота, конечно, нужно еще продумать
+// в данный момент это просто расстояние между точкой и отрезком
 double ParticleFilter::line_distance(const line &a, const line &b) const {
 
 }

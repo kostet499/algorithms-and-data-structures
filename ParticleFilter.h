@@ -14,6 +14,7 @@
 
 struct state {
     double x, y;
+    // угол оси OY робота с глобальной осью OY, робот "смотрит" без поворота головы вдоль своей OY
     double angle;
 
     state(double, double, double);
