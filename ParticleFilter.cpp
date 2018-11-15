@@ -33,7 +33,7 @@ void ParticleFilter::SetToNewSystem(const state &particle, dot &object) const {
             object.x * (-sin(particle.angle)) + object.y * cos(particle.angle)
             );
     // параллельный перенос
-    object = object + particle.position;
+    object = rotated + particle.position;
 }
 
 // угол между векторами
