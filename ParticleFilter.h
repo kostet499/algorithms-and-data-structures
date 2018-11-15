@@ -29,17 +29,18 @@ public:
     void PassNewVision(const char *filename);
 private:
     dot ComputeShift(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const;
-    double ScoreLine(const line &a, const line &b) const;
+    double ScoreLine(const state &particle, const line &a, const line &b) const;
     double LineAngle(const line &a, const line &b) const;
     double ComputeAngle(const dot &a, const dot &b) const;
     double AnglePenalty(double angle) const;
     double DistancePenalty(double distance) const;
-    double LineDistance(const line &a, const line &b) const;
+    double DistanceRobotToLine(const state &particle, const line &b) const;
     void SetToNewSystem(const state &particle, dot &object) const;
 private:
     JsonField field;
     std::vector<state> particles;
     dot velocity;
+    dot robot_position;
     std::chrono::_V2::system_clock::time_point time = std::chrono::system_clock::now();
 };
 

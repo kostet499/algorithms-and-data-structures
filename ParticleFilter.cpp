@@ -16,8 +16,8 @@ void ParticleFilter::PassNewVision(const char *filename) {
 
     for(size_t i = 0; i < particles.size(); ++i) {
         // сначала нужно перейти от систем координат робота к новым координатам
-        auto objects_new_system = objects.GetLinesSeen();
-        for(auto &object : objects_new_system) {
+        auto objects_ns = objects.GetLinesSeen();
+        for(auto &object : objects_ns) {
             SetToNewSystem(particles[i], object.first);
             SetToNewSystem(particles[i], object.second);
         }
@@ -55,12 +55,25 @@ double ParticleFilter::LineAngle(const line &a, const line &b) const {
     return atan2(two, one);
 }
 
-// не расстояние между линиями!
-// это модуль разности расстояния от одной линии до робота и от другой линии до робота!
-// расстояние от линии до робота, конечно, нужно еще продумать
-// в данный момент это просто расстояние между точкой и отрезком
-double ParticleFilter::LineDistance(const line &a, const line &b) const {
+// расстояние между роботом и линией в глобальной системе координат
+// использовал своё аналитическое решение, которые уже было протестировано в другой задаче
+double ParticleFilter::DistanceRobotToLine(const state &particle, const line &liny) const {
+    auto direction = liny.second - liny.first;
+    auto touch = particle.position - liny.first;
+    auto angle_cos = ComputeAngle(touch, direction);
+    auto parameter = touch(direction) / pow(direction.norm(), 2);
 
+    if(direction.norm() < 1e-8 || 0.0 > parameter) {
+        return (liny.first - particle.position).norm();
+    }
+    if(parameter > 1.0) {
+        return (liny.second - particle.position).norm();
+    }
+
+    double sq_cos = pow(angle_cos, 2);
+    double sinus = sq_cos > 1 ? 0 : sqrt(1 - sq_cos);
+
+    return touch.norm() * sinus;
 }
 
 // функции штрафов, можем делать что угодно)
@@ -73,9 +86,11 @@ double ParticleFilter::DistancePenalty(double distance) const {
 }
 
 // функция для определения "различия" линий
-// определяем разницу направлений - оцениваем модуль угла между линиями
-double ParticleFilter::ScoreLine(const line &a, const line &b) const {
-    return AnglePenalty(LineAngle(a, b)) + DistancePenalty(LineDistance(a, b));
+// штрафуем за разницу направлений линий
+// штрафуем за разницу расстояний от робота до линий
+double ParticleFilter::ScoreLine(const state &particle, const line &a, const line &b) const {
+    return AnglePenalty(LineAngle(a, b)) +
+    DistancePenalty(fabs(DistanceRobotToLine(particle, a) - DistanceRobotToLine(particle, b)));
 }
 
 void ParticleFilter::PassNewVelocity(dot new_velocity) {

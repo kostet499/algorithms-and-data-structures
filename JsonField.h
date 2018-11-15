@@ -26,6 +26,9 @@ struct dot {
     dot operator*(double number) const {
         return {this->x * number, this->y * number};
     }
+    double operator()(const dot& a) const {
+        return this->x * a.x + this->y + a.y;
+    }
 };
 
 using line = std::pair<dot, dot>;
