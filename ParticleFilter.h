@@ -29,13 +29,16 @@ public:
     void PassNewVision(const char *filename);
 private:
     dot ComputeShift(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const;
-    double ScoreLine(const state &particle, const line &a, const line &b) const;
-    double LineAngle(const line &a, const line &b) const;
-    double ComputeAngle(const dot &a, const dot &b) const;
-    double AnglePenalty(double angle) const;
-    double DistancePenalty(double distance) const;
-    double DistanceRobotToLine(const state &particle, const line &b) const;
-    void SetToNewSystem(const state &particle, dot &object) const;
+    static double ScoreLine(const state &particle, const line &a, const line &b);
+    static double LineAngle(const line &a, const line &b);
+    static double ComputeAngle(const dot &a, const dot &b);
+    static double AnglePenalty(double angle);
+    static double DistancePenalty(double distance);
+    static double DistanceRobotToLine(const state &particle, const line &b);
+    static double ChooseBestFit(const state &particle, const std::vector<line> &lines_seen,
+            double (*GiveScore)(const state &, const line &, const line &) );
+    static void MistakesToProbability(std::vector<double> &mistakes);
+    static void SetToNewSystem(const state &particle, dot &object);
 private:
     JsonField field;
     std::vector<state> particles;
