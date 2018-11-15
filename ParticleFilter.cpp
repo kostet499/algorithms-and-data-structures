@@ -9,6 +9,18 @@ state::state() : state(0.0, 0.0, 0.0){}
 
 ParticleFilter::ParticleFilter(const JsonField &f) : field(f) {}
 
+void ParticleFilter::PassNewVision(const char *filename) {
+    JsonObjectsSeen objects(filename);
+}
+
+// угол между векторами
+double angle(dot a, dot b) {
+    // http://qaru.site/questions/143580/direct-way-of-computing-clockwise-angle-between-2-vectors
+    double one = a.x * b.x + a.y * b.y;
+    double two = a.x * b.y- a.y * b.x;
+    return atan2(two, one);
+}
+
 void ParticleFilter::PassNewVelocity(dot new_velocity) {
     auto current_time = std::chrono::system_clock::now();
     std::vector<state> new_particles(particles.size());
@@ -22,14 +34,16 @@ void ParticleFilter::PassNewVelocity(dot new_velocity) {
     // радиус вектор перемещения в системе отсчёта робота
     dot shift = Motion(current_time, new_velocity);
 
-    boost::taus88 generator(generator_seed);
-    boost::normal_distribution<double> absolute_shift_noise(shift.norm(), sigma_shift);
-    // подумаю еще как представлять направление вектора ...
-    boost::normal_distribution<double> vector_angle_noise(, sigma_angle);
+    // ось ОУ робота
+    dot OY(0, 1);
 
+    boost::taus88 generator(generator_seed);
+    // выдаёт модуль скорости + шум
+    boost::normal_distribution<double> absolute_shift_noise(shift.norm(), sigma_shift);
+
+    boost::normal_distribution<double> vector_angle_noise(angle(OY, shift), sigma_angle);
 
     for(const auto &particle : particles) {
-        // code ...
     }
 
     velocity = new_velocity;

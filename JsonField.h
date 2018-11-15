@@ -17,16 +17,18 @@ struct dot {
     double norm();
 };
 
+using line = std::pair<dot, dot>;
+
 class JsonField {
 public:
     explicit JsonField(const char *filename);
-    const dot &operator[](size_t);
+    const std::pair<dot, dot> &operator[](size_t);
     double width() const;
     double height() const;
 private:
     double field_width;
     double field_height;
-    std::vector<dot> static_field_objects;
+    std::vector<line> field_lines;
 };
 
 
