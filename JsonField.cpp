@@ -3,9 +3,6 @@
 //
 
 #include "JsonField.h"
-#include <jsoncpp/json/json.h>
-#include <iostream>
-#include <string>
 
 dot::dot(double value1, double value2) :
         x(value1),

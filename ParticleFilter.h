@@ -6,14 +6,11 @@
 #define PARTICLEFILTER_PARTICLEFILTER_H
 
 #include "JsonObjectsSeen.h"
-#include <vector>
 #include <chrono>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/taus88.hpp>
-#include <cmath>
 #include <boost/random/discrete_distribution.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
-#include <jsoncpp/json/json.h>
 
 struct state {
     dot position;
@@ -37,6 +34,7 @@ public:
     explicit ParticleFilter(const JsonField &, const char*, state initial_robot_state, size_t particles_amount, int field_half);
     void PassNewOdometry(odometry measurement);
     void PassNewVision(const char *filename);
+    static void MistakesToProbability(std::vector<double> &mistakes);
 private:
     dot ComputeShift(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const;
     static double ScoreLine(const state &particle, const line &a, const line &b);
@@ -47,7 +45,6 @@ private:
     static double DistanceRobotToLine(const state &particle, const line &b);
     static double ChooseBestFit(const state &particle, const std::vector<line> &lines_seen,
             double (*GiveScore)(const state &, const line &, const line &) );
-    static void MistakesToProbability(std::vector<double> &mistakes);
     static void SetToNewSystem(const state &particle, dot &object);
     void LowVarianceResample(size_t particles_count);
 private:

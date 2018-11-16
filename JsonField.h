@@ -6,7 +6,10 @@
 #define ALGOS_JSONFIELD_H
 
 #include "vector"
-#include <math.h>
+#include <cmath>
+#include <jsoncpp/json/json.h>
+#include <iostream>
+#include <string>
 
 struct dot {
     double x;
