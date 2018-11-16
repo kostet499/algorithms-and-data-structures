@@ -3,16 +3,24 @@
 //
 
 #include "ParticleFilter.h"
-#include <boost/random/discrete_distribution.hpp>
-#include <boost/random/uniform_real_distribution.hpp>
+
 state::state(dot pos, double k) : position(pos), angle(k) {}
 state::state() : state(dot(0.0, 0.0), 0.0){}
 
-ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state, size_t amount, int field_half)
+ParticleFilter::ParticleFilter(const JsonField &f, const char* config_filename, state initial_robot_state, size_t amount, int field_half)
 : field(f), robot(initial_robot_state), particles_amount(amount){
+    // работа с конфигом
+    std::freopen(config_filename, "r", stdin);
+    Json::Value root;
+    std::cin >> root;
+    for(auto &val : root["config_filename"]) {
+        odometry_noise.emplace_back(val.asDouble());
+    }
+
+    // раскидываем частички по полю
     weights.resize(particles_amount, 1.0 / particles_amount);
     particles.resize(particles_amount);
-    // раскидываем частички по полю
+
     const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
     boost::taus88 generator(generator_seed);
 
@@ -40,7 +48,7 @@ void ParticleFilter::PassNewVision(const char *filename) {
         // в данный момент это ошибки
         mistakes[i] = ChooseBestFit(particles[i], objects_ns, ScoreLine);
     }
-
+    // разделил понятия ошибок и весов на будущее, в данный момент можно было бы обойтись без доп. массива
     MistakesToProbability(mistakes);
     weights = mistakes;
 
@@ -88,8 +96,27 @@ void ParticleFilter::LowVarianceResample(size_t particles_count) {
 }
 
 void ParticleFilter::MistakesToProbability(std::vector<double> &mistakes) {
-    // заглушка
-    // нужно вообще говоря подумать, что тут лучше сделать
+    // мой первый вариант
+    // введем четыре условия
+    // p - функция вероятности от ошибки
+    // p - линейная функция от ошибки
+    // p(average(mistakes)) = 1 / particles_amount
+    // p(max(mistakes)) = 0
+    // sum p(mistake) by all mistakes = 1
+    // фактически только что я задал прямую по двум точкам, чтобы сумма вероятностей была 1 ))
+
+    double average = 0.0;
+    double maximum = 0.0;
+    for(double &mistake : mistakes) {
+        average += mistake;
+        maximum = std::max(maximum, mistake);
+    }
+    average /= mistakes.size(); // mistakes.size() совпадает с числом частиц
+    double coef = (0.0 - 1.0 / mistakes.size()) / (maximum - average);
+    double intercept = -maximum * coef;
+    for(double &mistake : mistakes) {
+        mistake = mistake * coef + intercept;
+    }
 }
 
 double ParticleFilter::ChooseBestFit(const state &particle, const std::vector<line> &lines_seen,
@@ -187,11 +214,9 @@ void ParticleFilter::PassNewOdometry(odometry od) {
     double shift = dot(od.new_x - od.old_x, od.new_y - od.old_y).norm();
     double rot2 = od.new_angle - od.old_angle - rot1;
 
-    // параметры шума
-    double a1 = 0.5, a2 = 0.5, a3 = 0.5, a4 = 0.5;
-    double sigma_rot1 = std::sqrt(a1 * pow(rot1, 2) + a2 * pow(shift, 2));
-    double sigma_shift = std::sqrt(a3 * pow(shift, 2) + a4 * pow(rot1, 2) + a4 * pow(rot2, 2));
-    double sigma_rot2 = std::sqrt(a1 * pow(rot2, 2) + a2 * pow(shift, 2));
+    double sigma_rot1 = std::sqrt(odometry_noise[0] * pow(rot1, 2) + odometry_noise[1] * pow(shift, 2));
+    double sigma_shift = std::sqrt(odometry_noise[2] * pow(shift, 2) + odometry_noise[3] * (pow(rot1, 2) + pow(rot2, 2)));
+    double sigma_rot2 = std::sqrt(odometry_noise[0] * pow(rot2, 2) + odometry_noise[1] * pow(shift, 2));
 
     const unsigned int generator_seed = static_cast<const unsigned  int> (current_time.time_since_epoch().count());
     boost::taus88 generator(generator_seed);

@@ -11,6 +11,9 @@
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/taus88.hpp>
 #include <cmath>
+#include <boost/random/discrete_distribution.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
+#include <jsoncpp/json/json.h>
 
 struct state {
     dot position;
@@ -31,7 +34,7 @@ struct odometry {
 
 class ParticleFilter {
 public:
-    explicit ParticleFilter(const JsonField &, state initial_robot_state, size_t particles_amount, int field_half);
+    explicit ParticleFilter(const JsonField &, const char*, state initial_robot_state, size_t particles_amount, int field_half);
     void PassNewOdometry(odometry measurement);
     void PassNewVision(const char *filename);
 private:
@@ -54,6 +57,7 @@ private:
     size_t particles_amount;
     dot velocity;
     state robot;
+    std::vector<double> odometry_noise;
     std::chrono::_V2::system_clock::time_point time = std::chrono::system_clock::now();
 };
 
