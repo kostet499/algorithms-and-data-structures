@@ -58,7 +58,7 @@ void ParticleFilter::PassNewVision(const char *filename) {
 
 void ParticleFilter::LowVarianceResample(size_t particles_count) {
     std::vector<state> new_particles;
-    std::vector<state> new_weigths;
+    std::vector<double> new_weigths;
     const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
     boost::taus88 generator(generator_seed);
 
@@ -79,11 +79,12 @@ void ParticleFilter::LowVarianceResample(size_t particles_count) {
         weight_sum += weights[i];
     }
     // нормализуем новые веса
-    for(auto &wes : weights) {
+    for(auto &wes : new_weigths) {
         wes /= weight_sum;
     }
     // замещаем частицы новой моделью
     particles = new_particles;
+    weights = new_weigths;
 }
 
 void ParticleFilter::MistakesToProbability(std::vector<double> &mistakes) {
