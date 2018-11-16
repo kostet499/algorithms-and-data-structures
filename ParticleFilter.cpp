@@ -111,39 +111,43 @@ double ParticleFilter::ScoreLine(const state &particle, const line &a, const lin
     DistancePenalty(fabs(DistanceRobotToLine(particle, a) - DistanceRobotToLine(particle, b)));
 }
 
-// Я, кажется, неправильно построил модель скорости
-void ParticleFilter::PassNewVelocity(dot new_velocity) {
+// нужно проверять
+void ParticleFilter::PassNewOdometry(std::vector<dot> odometry) {
     auto current_time = std::chrono::system_clock::now();
     std::vector<state> new_particles(particles.size());
-
-    // параметры, которые мы вольны менять
-    double sigma_shift = 0.5;
-    double sigma_angle = 0.5;
-    const unsigned int generator_seed = static_cast<const unsigned  int> (current_time.time_since_epoch().count());
-
-    // радиус вектор перемещения в системе отсчёта робота
-    dot shift = ComputeShift(current_time, new_velocity);
-
-    // ось ОУ робота
+    // глобальная ось OY
     dot OY(0, 1);
 
+    double rot1 = ComputeAngle(OY, dot(odometry[0].y - odometry[0].x, odometry[1].y - odometry[1].x)) - odometry[2].x;
+    double shift = dot(odometry[0].x - odometry[0].y, odometry[1].x - odometry[1].y).norm();
+    double rot2 = odometry[2].y - odometry[2].y - rot1;
+
+    // параметры шума
+    double a1 = 0.5, a2 = 0.5, a3 = 0.5, a4 = 0.5;
+    double sigma_rot1 = std::sqrt(a1 * pow(rot1, 2) + a2 * pow(shift, 2));
+    double sigma_shift = std::sqrt(a3 * pow(shift, 2) + a4 * pow(rot1, 2) + a4 * pow(rot2, 2));
+    double sigma_rot2 = std::sqrt(a1 * pow(rot2, 2) + a2 * pow(shift, 2));
+    const unsigned int generator_seed = static_cast<const unsigned  int> (current_time.time_since_epoch().count());
+
+
     boost::taus88 generator(generator_seed);
-    // выдаёт модуль скорости + гауссовский шум
-    boost::normal_distribution<double> absolute_shift_noise(shift.norm(), sigma_shift);
-    // выдаёт угол с осью ОУ + гауссовский шум
-    boost::normal_distribution<double> vector_angle_noise(ComputeAngle(OY, shift), sigma_angle);
+    // гауссовский шум
+    boost::normal_distribution<double> shift_noise(0.0, sigma_shift);
+    boost::normal_distribution<double> rot1_noise(0.0, sigma_rot1);
+    boost::normal_distribution<double> rot2_noise(0.0, sigma_rot2);
 
     for(auto &particle : particles) {
-        double angle = vector_angle_noise(generator);
-        double absolute_shift = absolute_shift_noise(generator);
-        particle.position.x += absolute_shift * cos(angle);
-        particle.position.y += absolute_shift * sin(angle);
-    }
+        double rot1_n = rot1 - rot1_noise(generator);
+        double rot2_n = rot2 - rot2_noise(generator);
+        double shift_n = shift - shift_noise(generator);
 
-    velocity = new_velocity;
-    time = current_time;
+        particle.position.x = particle.position.x + shift_n * cos(particle.angle + rot1_n);
+        particle.position.y = particle.position.y + shift_n * sin(particle.angle + rot1_n);
+        particle.angle += rot1_n + rot2_n;
+    }
 }
 
+// пока что не используется, так как предполагается, что одометрия, приходит уже готовой
 dot ParticleFilter::ComputeShift(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const {
     auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - time);
     double time_in_secs = millisecs.count() * 1e-3;

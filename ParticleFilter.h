@@ -25,7 +25,7 @@ struct state {
 class ParticleFilter {
 public:
     explicit ParticleFilter(const JsonField &);
-    void PassNewVelocity(dot velocity);
+    void PassNewOdometry(std::vector<dot> odometry);
     void PassNewVision(const char *filename);
 private:
     dot ComputeShift(std::chrono::_V2::system_clock::time_point current_time, const dot &new_velocity) const;
