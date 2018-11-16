@@ -31,7 +31,7 @@ struct odometry {
 
 class ParticleFilter {
 public:
-    explicit ParticleFilter(const JsonField &, state initial_robot_state, size_t particles_amount);
+    explicit ParticleFilter(const JsonField &, state initial_robot_state, size_t particles_amount, int field_half);
     void PassNewOdometry(odometry measurement);
     void PassNewVision(const char *filename);
 private:

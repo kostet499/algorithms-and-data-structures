@@ -8,7 +8,7 @@
 state::state(dot pos, double k) : position(pos), angle(k) {}
 state::state() : state(dot(0.0, 0.0), 0.0){}
 
-ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state, size_t amount)
+ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state, size_t amount, int field_half)
 : field(f), robot(initial_robot_state), particles_amount(amount){
     weights.resize(particles_amount, 1.0 / particles_amount);
     particles.resize(particles_amount);
@@ -17,7 +17,7 @@ ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state, si
     boost::taus88 generator(generator_seed);
 
     boost::random::uniform_real_distribution<double> x_coord(0.0, field.width());
-    boost::random::uniform_real_distribution<double> y_coord(0.0, field.height());
+    boost::random::uniform_real_distribution<double> y_coord(field_half * field.height() / 2, (field_half + 1.0) * field.height()/ 2);
     boost::random::uniform_real_distribution<double> angle(0.0, 2 * M_PI);
     for(auto &particle : particles) {
         particle.position.x = x_coord(generator);
