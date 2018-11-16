@@ -13,7 +13,6 @@ ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state) : 
 
 void ParticleFilter::PassNewVision(const char *filename) {
     JsonObjectsSeen objects(filename);
-    std::vector<double> weights(particles.size());
     // мы должны сопоставить линии, которые мы видим линиям поля
 
     for(size_t i = 0; i < particles.size(); ++i) {
@@ -36,20 +35,23 @@ void ParticleFilter::PassNewVision(const char *filename) {
         robot.angle += particles[i].angle * weights[i];
     }
 
-    LowVarianceResample(weights);
+    // оставляем только 30 частиц например из 100.
+    LowVarianceResample(30);
+    // дополняем до нужного числа частиц
 }
 
-void ParticleFilter::LowVarianceResample(const std::vector<double> &weights) {
+void ParticleFilter::LowVarianceResample(size_t particles_count) {
     std::vector<state> new_particles;
+    std::vector<state> new_weigths;
     const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
     boost::taus88 generator(generator_seed);
 
     double weight = weights[0];
-    // количество частиц для ресамплинга
-    size_t particles_count = 100;
     size_t random_number = generator() % (particles_count + 1);
     double number = random_number == 0 ? 0 : 1.0 / random_number;
     size_t i = 0;
+
+    double weight_sum = 0.0;
     for(size_t m = 0; m < particles_count; ++m) {
         double uber = number + static_cast<double>(m) / particles_count;
         while(uber > weight) {
@@ -57,8 +59,13 @@ void ParticleFilter::LowVarianceResample(const std::vector<double> &weights) {
             weight += weights[i];
         }
         new_particles.emplace_back(particles[i]);
+        new_weigths.emplace_back(weights[i]);
+        weight_sum += weights[i];
     }
-
+    // нормализуем новые веса
+    for(auto &wes : weights) {
+        wes /= weight_sum;
+    }
     // замещаем частицы новой моделью
     particles = new_particles;
 }

@@ -46,10 +46,11 @@ private:
             double (*GiveScore)(const state &, const line &, const line &) );
     static void MistakesToProbability(std::vector<double> &mistakes);
     static void SetToNewSystem(const state &particle, dot &object);
-    void LowVarianceResample(const std::vector<double> &weights);
+    void LowVarianceResample(size_t particles_count);
 private:
     JsonField field;
     std::vector<state> particles;
+    std::vector<double> weights;
     dot velocity;
     state robot;
     std::chrono::_V2::system_clock::time_point time = std::chrono::system_clock::now();
