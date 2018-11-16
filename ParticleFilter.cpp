@@ -3,11 +3,13 @@
 //
 
 #include "ParticleFilter.h"
+#include <boost/random/discrete_distribution.hpp>
 
 state::state(dot pos, double k) : position(pos), angle(k) {}
 state::state() : state(dot(0.0, 0.0), 0.0){}
 
-ParticleFilter::ParticleFilter(const JsonField &f) : field(f) {}
+ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state) : field(f), robot(initial_robot_state){
+}
 
 void ParticleFilter::PassNewVision(const char *filename) {
     JsonObjectsSeen objects(filename);
@@ -27,7 +29,38 @@ void ParticleFilter::PassNewVision(const char *filename) {
 
     MistakesToProbability(weights);
 
+    // получаем новую позицию - просто берем среднее по координатам
+    robot.position = dot(0.0, 0.0);
+    for(size_t i = 0; i < particles.size(); ++i) {
+        robot.position = robot.position + particles[i].position * weights[i];
+        robot.angle += particles[i].angle * weights[i];
+    }
 
+    LowVarianceResample(weights);
+}
+
+void ParticleFilter::LowVarianceResample(const std::vector<double> &weights) {
+    std::vector<state> new_particles;
+    const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
+    boost::taus88 generator(generator_seed);
+
+    double weight = weights[0];
+    // количество частиц для ресамплинга
+    size_t particles_count = 100;
+    size_t random_number = generator() % (particles_count + 1);
+    double number = random_number == 0 ? 0 : 1.0 / random_number;
+    size_t i = 0;
+    for(size_t m = 0; m < particles_count; ++m) {
+        double uber = number + static_cast<double>(m) / particles_count;
+        while(uber > weight) {
+            ++i;
+            weight += weights[i];
+        }
+        new_particles.emplace_back(particles[i]);
+    }
+
+    // замещаем частицы новой моделью
+    particles = new_particles;
 }
 
 void ParticleFilter::MistakesToProbability(std::vector<double> &mistakes) {
@@ -37,9 +70,7 @@ void ParticleFilter::MistakesToProbability(std::vector<double> &mistakes) {
 
 double ParticleFilter::ChooseBestFit(const state &particle, const std::vector<line> &lines_seen,
                                          double (*GiveScore)(const state &, const line &, const line &) ) {
-    // теперь мы должны сопоставить линии, которые мы видим, линиям поля
-    // я предлагаю для каждой видимой линии ставить в соответствие ей линию поля
-    // * тут хочет быть венгерский алгоритм *
+    // заглушка
     return 2281337.0;
 }
 
@@ -111,25 +142,34 @@ double ParticleFilter::ScoreLine(const state &particle, const line &a, const lin
     DistancePenalty(fabs(DistanceRobotToLine(particle, a) - DistanceRobotToLine(particle, b)));
 }
 
-// нужно проверять
-void ParticleFilter::PassNewOdometry(std::vector<dot> odometry) {
+odometry::odometry(double a1, double a2, double b1, double b2, double c1, double c2, size_t mes_time) {
+    old_x = a1;
+    new_x = a2;
+    old_y = b1;
+    new_y = b2;
+    old_angle = c1;
+    old_angle = c2;
+    time = mes_time;
+}
+
+// нужно разобраться с одометрией, смущают больше всего углы - от чего их отсчитывать?
+void ParticleFilter::PassNewOdometry(odometry od) {
     auto current_time = std::chrono::system_clock::now();
     std::vector<state> new_particles(particles.size());
-    // глобальная ось OY
+    // глобальная ось OY, пока что с ней считаю угол
     dot OY(0, 1);
 
-    double rot1 = ComputeAngle(OY, dot(odometry[0].y - odometry[0].x, odometry[1].y - odometry[1].x)) - odometry[2].x;
-    double shift = dot(odometry[0].x - odometry[0].y, odometry[1].x - odometry[1].y).norm();
-    double rot2 = odometry[2].y - odometry[2].y - rot1;
+    double rot1 = ComputeAngle(OY, dot(od.new_x - od.old_x, od.new_y - od.old_y)) - od.old_angle;
+    double shift = dot(od.new_x - od.old_x, od.new_y - od.old_y).norm();
+    double rot2 = od.new_angle - od.old_angle - rot1;
 
     // параметры шума
     double a1 = 0.5, a2 = 0.5, a3 = 0.5, a4 = 0.5;
     double sigma_rot1 = std::sqrt(a1 * pow(rot1, 2) + a2 * pow(shift, 2));
     double sigma_shift = std::sqrt(a3 * pow(shift, 2) + a4 * pow(rot1, 2) + a4 * pow(rot2, 2));
     double sigma_rot2 = std::sqrt(a1 * pow(rot2, 2) + a2 * pow(shift, 2));
+
     const unsigned int generator_seed = static_cast<const unsigned  int> (current_time.time_since_epoch().count());
-
-
     boost::taus88 generator(generator_seed);
     // гауссовский шум
     boost::normal_distribution<double> shift_noise(0.0, sigma_shift);
@@ -153,4 +193,3 @@ dot ParticleFilter::ComputeShift(std::chrono::_V2::system_clock::time_point curr
     double time_in_secs = millisecs.count() * 1e-3;
     return {velocity.x * time_in_secs, velocity.y * time_in_secs};
 }
-
