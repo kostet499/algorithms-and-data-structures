@@ -31,7 +31,7 @@ struct odometry {
 
 class ParticleFilter {
 public:
-    explicit ParticleFilter(const JsonField &, state initial_robot_state);
+    explicit ParticleFilter(const JsonField &, state initial_robot_state, size_t particles_amount);
     void PassNewOdometry(odometry measurement);
     void PassNewVision(const char *filename);
 private:
@@ -51,6 +51,7 @@ private:
     JsonField field;
     std::vector<state> particles;
     std::vector<double> weights;
+    size_t particles_amount;
     dot velocity;
     state robot;
     std::chrono::_V2::system_clock::time_point time = std::chrono::system_clock::now();

@@ -4,17 +4,32 @@
 
 #include "ParticleFilter.h"
 #include <boost/random/discrete_distribution.hpp>
-
+#include <boost/random/uniform_real_distribution.hpp>
 state::state(dot pos, double k) : position(pos), angle(k) {}
 state::state() : state(dot(0.0, 0.0), 0.0){}
 
-ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state) : field(f), robot(initial_robot_state){
+ParticleFilter::ParticleFilter(const JsonField &f, state initial_robot_state, size_t amount)
+: field(f), robot(initial_robot_state), particles_amount(amount){
+    weights.resize(particles_amount, 1.0 / particles_amount);
+    particles.resize(particles_amount);
+    // раскидываем частички по полю
+    const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
+    boost::taus88 generator(generator_seed);
+
+    boost::random::uniform_real_distribution<double> x_coord(0.0, field.width());
+    boost::random::uniform_real_distribution<double> y_coord(0.0, field.height());
+    boost::random::uniform_real_distribution<double> angle(0.0, 2 * M_PI);
+    for(auto &particle : particles) {
+        particle.position.x = x_coord(generator);
+        particle.position.y = y_coord(generator);
+        particle.angle = angle(generator);
+    }
 }
 
 void ParticleFilter::PassNewVision(const char *filename) {
     JsonObjectsSeen objects(filename);
     // мы должны сопоставить линии, которые мы видим линиям поля
-
+    std::vector<double> mistakes(particles_amount);
     for(size_t i = 0; i < particles.size(); ++i) {
         // сначала нужно перейти от систем координат робота к новым координатам
         auto objects_ns = objects.GetLinesSeen();
@@ -23,10 +38,11 @@ void ParticleFilter::PassNewVision(const char *filename) {
             SetToNewSystem(particles[i], object.second);
         }
         // в данный момент это ошибки
-        weights[i] = ChooseBestFit(particles[i], objects_ns, ScoreLine);
+        mistakes[i] = ChooseBestFit(particles[i], objects_ns, ScoreLine);
     }
 
-    MistakesToProbability(weights);
+    MistakesToProbability(mistakes);
+    weights = mistakes;
 
     // получаем новую позицию - просто берем среднее по координатам
     robot.position = dot(0.0, 0.0);
