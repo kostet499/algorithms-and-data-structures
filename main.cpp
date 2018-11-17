@@ -2,19 +2,11 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 /*
  * http://sccg.sk/~samuelcik/dgs/quad_edge.pdf
  */
-
-
-
-class QuadEdge {
-public:
-private:
-private:
-};
-
 
 struct point {
     double x;
@@ -36,6 +28,57 @@ struct point {
     }
 };
 
+
+
+class QuadEdge {
+    using ptr = std::shared_ptr<QuadEdge>;
+public:
+    QuadEdge() : org(0, 0) {
+        next.resize(4, nullptr);
+    }
+
+    point Org() {
+        return org;
+    }
+
+    point Dest() {
+        return Sym()->org;
+    }
+
+    void Splice(ptr a, ptr b) {
+
+    }
+
+    QuadEdge Connect() {
+        QuadEdge edge;
+
+    }
+
+    void DeleteEdge(QuadEdge &a) {
+
+    }
+
+    ptr Oprev() {
+
+    }
+
+    ptr Sym() {
+
+    }
+
+
+private:
+    std::vector< std::shared_ptr<QuadEdge> > next;
+    // origin point
+    point org;
+};
+
+class Maintainer {
+public:
+private:
+private:
+};
+
 // в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
 bool InCircle(point a, point b, point c, point d) {
     // считаем суперопределитель
@@ -46,6 +89,7 @@ bool InCircle(point a, point b, point c, point d) {
     return part1 - part2 + part3 - part4 > 0;
 }
 
+// точки a, b, c формируют треугольник с обходом против часовой стрелки
 bool CCW(point a, point b, point c) {
     return a.x * (b.y - c.y) - b.x * (a.y - c.y) + c.x * (a.y - b.y) > 0;
 }
