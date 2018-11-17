@@ -31,48 +31,38 @@ struct point {
 // without flip - simplified version
 class QuadEdge {
     using ptr = std::shared_ptr<QuadEdge>;
+    using record = std::pair<ptr, size_t>;
 public:
     QuadEdge() : org(0, 0), dest (0, 0) {
-        next.resize(4, nullptr);
-        lnext.resize(4, nullptr);
+        next.resize(4, record(nullptr, 0));
+        lnext.resize(4, record(nullptr, 0));
+    }
+
+    static record Rot(const record &rec) {
+        return {rec.first, (rec.second + 1) & 3};
+    }
+
+    static record Sym(const record &rec) {
+        return {rec.first, (rec.second + 2) & 3};
+    }
+
+    static record RevRot(const record &rec) {
+        return {rec.first, (rec.second + 3) & 3};
+    }
+
+    static record Onext(const record &rec) {
+        return {rec.first->next[rec.second].first, rec.first->next[rec.second].second};
+    }
+
+    static record Oprev(const record &rec) {
+        return Rot(Onext(Rot(rec)));
     }
 
 private:
-    std::vector<ptr> next;
-    std::vector<ptr> lnext;
+    std::vector<record> next;
+    std::vector<record> lnext;
     point org;
     point dest;
-};
-
-using ptr = std::shared_ptr<QuadEdge>;
-
-class Record {
-public:
-    Record(ptr &a, size_t type_of_a) : edge(a), type(type_of_a) {};
-
-    Record Rot() {
-        return {edge, (type + 1) & 3};
-    }
-
-    Record Sym() {
-        return {edge, (type + 2) & 3};
-    }
-
-    Record RevRot() {
-        return {edge, (type + 3) & 3};
-    }
-
-    Record Onext() {
-        return {edge, type};
-    }
-
-    Record Oprev() {
-
-    }
-
-private:
-    ptr edge;
-    size_t type;
 };
 
 // в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
