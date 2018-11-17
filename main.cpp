@@ -38,12 +38,22 @@ public:
     }
 
     point Org() {
-        return org;
+        if(type == 0) {
+            return org;
+        }
+        else if(type == 2) {
+            return dest;
+        }
     }
 
     // dest equals Sym()->org;
     point Dest() {
-        return dest;
+        if(type == 0) {
+            return dest;
+        }
+        else if(type == 0) {
+            return org;
+        }
     }
 
     void Splice(ptr &a, ptr &b) {
@@ -80,8 +90,8 @@ public:
 
 private:
     std::vector<ptr> next;
-    std::vector<ptr
-    // origin point
+    std::vector<ptr> lnext;
+    int type = 0;
     point org;
     point dest;
 };
