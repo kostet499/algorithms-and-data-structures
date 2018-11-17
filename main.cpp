@@ -1,6 +1,18 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
+
+/*
+ * http://sccg.sk/~samuelcik/dgs/quad_edge.pdf
+ */
+
+class QuadEdge {
+public:
+private:
+private:
+};
+
 
 struct point {
     double x;
@@ -19,7 +31,20 @@ struct point {
     bool operator<(const point &b) {
         return (this->x < b.x) || (this->x == b.x && this->y < b.y);
     }
+    double operator()(void) {
+        return std::pow(this->x, 2) + std::pow(this->y, 2);
+    }
 };
+
+bool InCircle(point a, point b, point c, point d) {
+    // считаем суперопределитель
+    double part1 = a.x * (b.y * (c() - d()) - c.y * (b() - d()) + d.y * (b() - c()) );
+    double part2 = b.x * (a.y * (c() - d()) - c.y * (a() - d()) + d.y * (a() - c()) );
+    double part3 = c.x * (a.y * (b() - d()) - b.y * (a() - d()) + d.y * (a() - b()) );
+    double part4 = d.x * (a.y * (b() - c()) - b.y * (a() - c()) + c.y * (a() - b()) );
+    return part1 - part2 + part3 - part4 > 0;
+}
+
 
 void prepare_data(std::vector<point> &data) {
     double x;
