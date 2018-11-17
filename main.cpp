@@ -33,7 +33,7 @@ struct point {
 class QuadEdge {
     using ptr = std::shared_ptr<QuadEdge>;
 public:
-    QuadEdge() : org(0, 0) {
+    QuadEdge() : org(0, 0), dest (0, 0) {
         next.resize(4, nullptr);
     }
 
@@ -41,21 +41,21 @@ public:
         return org;
     }
 
+    // dest equals Sym()->org;
     point Dest() {
-        return Sym()->org;
+        return dest;
     }
 
-    void Splice(ptr a, ptr b) {
+    void Splice(ptr &a, ptr &b) {
 
     }
 
-    QuadEdge Connect() {
+    QuadEdge Connect(ptr &a, ptr &b) {
         QuadEdge edge;
-
+        edge.org = a->Dest();
     }
 
-    void DeleteEdge(QuadEdge &a) {
-
+    void DeleteEdge(ptr &a) {
     }
 
     ptr Oprev() {
@@ -63,14 +63,27 @@ public:
     }
 
     ptr Sym() {
+        return next[2];
+    }
+
+    ptr Rot() {
+        return next[1];
+    }
+
+    ptr Onext() {
 
     }
 
+    ptr Lnext() {
+
+    }
 
 private:
-    std::vector< std::shared_ptr<QuadEdge> > next;
+    std::vector<ptr> next;
+    std::vector<ptr
     // origin point
     point org;
+    point dest;
 };
 
 class Maintainer {
