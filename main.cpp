@@ -28,78 +28,51 @@ struct point {
     }
 };
 
-
-
+// without flip - simplified version
 class QuadEdge {
     using ptr = std::shared_ptr<QuadEdge>;
 public:
     QuadEdge() : org(0, 0), dest (0, 0) {
         next.resize(4, nullptr);
-    }
-
-    point Org() {
-        if(type == 0) {
-            return org;
-        }
-        else if(type == 2) {
-            return dest;
-        }
-    }
-
-    // dest equals Sym()->org;
-    point Dest() {
-        if(type == 0) {
-            return dest;
-        }
-        else if(type == 0) {
-            return org;
-        }
-    }
-
-    void Splice(ptr &a, ptr &b) {
-
-    }
-
-    QuadEdge Connect(ptr &a, ptr &b) {
-        QuadEdge edge;
-        edge.org = a->Dest();
-    }
-
-    void DeleteEdge(ptr &a) {
-    }
-
-    ptr Oprev() {
-
-    }
-
-    ptr Sym() {
-        return next[2];
-    }
-
-    ptr Rot() {
-        return next[1];
-    }
-
-    ptr Onext() {
-
-    }
-
-    ptr Lnext() {
-
+        lnext.resize(4, nullptr);
     }
 
 private:
     std::vector<ptr> next;
     std::vector<ptr> lnext;
-    int type = 0;
     point org;
     point dest;
 };
 
-class Maintainer {
+using ptr = std::shared_ptr<QuadEdge>;
+
+class Record {
 public:
+    Record(ptr &a, size_t type_of_a) : edge(a), type(type_of_a) {};
+
+    Record Rot() {
+        return {edge, (type + 1) & 3};
+    }
+
+    Record Sym() {
+        return {edge, (type + 2) & 3};
+    }
+
+    Record RevRot() {
+        return {edge, (type + 3) & 3};
+    }
+
+    Record Onext() {
+        return {edge, type};
+    }
+
+    Record Oprev() {
+
+    }
+
 private:
-private:
+    ptr edge;
+    size_t type;
 };
 
 // в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
