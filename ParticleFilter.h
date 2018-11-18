@@ -47,15 +47,19 @@ private:
             double (*GiveScore)(const state &, const line &, const line &) );
     static void SetToNewSystem(const state &particle, dot &object);
     void LowVarianceResample(size_t particles_count);
+    void RestoreParticles();
 private:
     JsonField field;
     std::vector<state> particles;
     std::vector<double> weights;
-    size_t particles_amount;
-    dot velocity;
-    state robot;
     std::vector<double> odometry_noise;
-    std::chrono::_V2::system_clock::time_point time = std::chrono::system_clock::now();
+    std::vector<double> restore_params;
+    size_t particles_amount;
+    state robot;
+    boost::taus88 generator;
+    // seems to be not needed
+    std::chrono::system_clock::time_point time = std::chrono::system_clock::now();
+    dot velocity;
 };
 
 

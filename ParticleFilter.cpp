@@ -8,7 +8,7 @@ state::state(dot pos, double k) : position(pos), angle(k) {}
 state::state() : state(dot(0.0, 0.0), 0.0){}
 
 ParticleFilter::ParticleFilter(const JsonField &f, const char* config_filename, state initial_robot_state, size_t amount, int field_half)
-: field(f), robot(initial_robot_state), particles_amount(amount){
+: field(f), robot(initial_robot_state), particles_amount(amount), generator(42) {
     // работа с конфигом
     std::freopen(config_filename, "r", stdin);
     Json::Value root;
@@ -20,9 +20,6 @@ ParticleFilter::ParticleFilter(const JsonField &f, const char* config_filename, 
     // раскидываем частички по полю
     weights.resize(particles_amount, 1.0 / particles_amount);
     particles.resize(particles_amount);
-
-    const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
-    boost::taus88 generator(generator_seed);
 
     boost::random::uniform_real_distribution<double> x_coord(0.0, field.width());
     boost::random::uniform_real_distribution<double> y_coord(field_half * field.height() / 2, (field_half + 1.0) * field.height()/ 2);
@@ -62,13 +59,12 @@ void ParticleFilter::PassNewVision(const char *filename) {
     // оставляем только 30 частиц например из 100.
     LowVarianceResample(30);
     // дополняем до нужного числа частиц
+    RestoreParticles();
 }
 
 void ParticleFilter::LowVarianceResample(size_t particles_count) {
     std::vector<state> new_particles;
     std::vector<double> new_weigths;
-    const unsigned int generator_seed = static_cast<const unsigned  int> (std::chrono::system_clock::now().time_since_epoch().count());
-    boost::taus88 generator(generator_seed);
 
     double weight = weights[0];
     size_t random_number = generator() % (particles_count + 1);
@@ -93,6 +89,29 @@ void ParticleFilter::LowVarianceResample(size_t particles_count) {
     // замещаем частицы новой моделью
     particles = new_particles;
     weights = new_weigths;
+}
+
+void ParticleFilter::RestoreParticles() {
+    size_t initial_amount = particles.size();
+    size_t current_particle = 0;
+    // may be useless
+    double weight_sum = 1.0;
+    for(double w : weights) {
+        weight_sum -= w;
+    }
+    while(particles.size() < particles_amount) {
+        boost::random::uniform_real_distribution<double> may_spawn(0.0, 1.0);
+        if(may_spawn(generator) < weights[current_particle]) {
+            boost::random::normal_distribution<double> x_coord(particles[current_particle].position.x,
+                                                               restore_params[0]);
+            boost::random::normal_distribution<double> y_coord(particles[current_particle].position.y,
+                                                               restore_params[1]);
+            boost::random::normal_distribution<double> angle(particles[current_particle].angle, restore_params[2]);
+            particles.emplace_back(state(dot(x_coord(generator), y_coord(generator)), angle(generator)));
+            weights.emplace_back(weight_sum / particles_amount);
+        }
+        current_particle = (current_particle + 1) % initial_amount;
+    }
 }
 
 void ParticleFilter::MistakesToProbability(std::vector<double> &mistakes) {
@@ -218,8 +237,6 @@ void ParticleFilter::PassNewOdometry(odometry od) {
     double sigma_shift = std::sqrt(odometry_noise[2] * pow(shift, 2) + odometry_noise[3] * (pow(rot1, 2) + pow(rot2, 2)));
     double sigma_rot2 = std::sqrt(odometry_noise[0] * pow(rot2, 2) + odometry_noise[1] * pow(shift, 2));
 
-    const unsigned int generator_seed = static_cast<const unsigned  int> (current_time.time_since_epoch().count());
-    boost::taus88 generator(generator_seed);
     // гауссовский шум
     boost::normal_distribution<double> shift_noise(0.0, sigma_shift);
     boost::normal_distribution<double> rot1_noise(0.0, sigma_rot1);
