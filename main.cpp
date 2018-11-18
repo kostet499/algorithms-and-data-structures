@@ -33,9 +33,18 @@ class QuadEdge {
     using ptr = std::shared_ptr<QuadEdge>;
     using record = std::pair<ptr, size_t>;
 public:
+    // subdivision of sphere
     QuadEdge() : org(0, 0), dest (0, 0) {
-        next.resize(4, record(nullptr, 0));
-        lnext.resize(4, record(nullptr, 0));
+        next.resize(4, record(this, 0));
+        lnext.resize(4, record(this, 0));
+        next[0].second = 0;
+        lnext[0].second = 2;
+        next[1].second = 3;
+        lnext[1].second = 1;
+        next[2].second = 2;
+        lnext[2].second = 0;
+        next[3].second = 1;
+        lnext[3].second = 3;
     }
 
     static record Rot(const record &rec) {
