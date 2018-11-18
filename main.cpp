@@ -64,7 +64,7 @@ public:
     }
 
     record Onext(const record &rec) {
-        return {rec.first->next[rec.second].first, rec.first->next[rec.second].second};
+        return rec.first->next[rec.second];
     }
 
     record Oprev(const record &rec) {
@@ -79,11 +79,22 @@ public:
         return Org(Sym(rec));
     }
 
+    friend void Splice(record &a, record &b);
+
 private:
     std::vector<record> next;
     std::vector<record> lnext;
     std::vector<point> org;
 };
+
+using ptr = std::shared_ptr<QuadEdge>;
+using record = std::pair<ptr, size_t>;
+
+void Splice(record &a, record &b) {
+    record temp =  b.first->Onext(b);
+    b.first->next[b.second] = a.first->Onext(a);
+    a.first->next[a.second] = temp;
+}
 
 // в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
 bool InCircle(point a, point b, point c, point d) {
