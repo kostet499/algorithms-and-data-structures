@@ -26,6 +26,8 @@ struct point {
     double operator()() {
         return std::pow(this->x, 2) + std::pow(this->y, 2);
     }
+    point() : x(0), y(0) {
+    }
 };
 
 // without flip - simplified version
@@ -34,9 +36,11 @@ class QuadEdge {
     using record = std::pair<ptr, size_t>;
 public:
     // subdivision of sphere
-    QuadEdge() : org(0, 0), dest (0, 0) {
+    QuadEdge() {
         next.resize(4, record(this, 0));
         lnext.resize(4, record(this, 0));
+        org.resize(4);
+
         next[0].second = 0;
         lnext[0].second = 2;
         next[1].second = 3;
@@ -47,31 +51,38 @@ public:
         lnext[3].second = 3;
     }
 
-    static record Rot(const record &rec) {
+    record Rot(const record &rec) {
         return {rec.first, (rec.second + 1) & 3};
     }
 
-    static record Sym(const record &rec) {
+    record Sym(const record &rec) {
         return {rec.first, (rec.second + 2) & 3};
     }
 
-    static record RevRot(const record &rec) {
+    record RevRot(const record &rec) {
         return {rec.first, (rec.second + 3) & 3};
     }
 
-    static record Onext(const record &rec) {
+    record Onext(const record &rec) {
         return {rec.first->next[rec.second].first, rec.first->next[rec.second].second};
     }
 
-    static record Oprev(const record &rec) {
+    record Oprev(const record &rec) {
         return Rot(Onext(Rot(rec)));
+    }
+
+    point Org(const record &rec) {
+        return org[rec.second];
+    }
+
+    point Dest(const record &rec) {
+        return Org(Sym(rec));
     }
 
 private:
     std::vector<record> next;
     std::vector<record> lnext;
-    point org;
-    point dest;
+    std::vector<point> org;
 };
 
 // в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
