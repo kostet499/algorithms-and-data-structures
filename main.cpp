@@ -40,10 +40,11 @@ bool CCW(point a, point b, point c) {
 // http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull
 class ConvexAndrew{
 public:
-    explicit ConvexAndrew(const std::vector<point> &sorted_list) {
-        hull.resize(2 * sorted_list.size());
+    // end - excluding
+    explicit ConvexAndrew(const std::vector<point> &sorted_list, size_t begin, size_t end) {
+        hull.resize(2 * (end - begin));
         size_t curr = 0;
-        for(size_t i = 0; i < sorted_list.size(); ++i) {
+        for(size_t i = begin; i < end; ++i) {
             while(curr > 1 && !CCW(hull[curr - 2], hull[curr - 1], sorted_list[i])) {
                 --curr;
             }
@@ -53,7 +54,7 @@ public:
 
         size_t optimal_size = curr;
         // the last point will be already in the down list
-        for(size_t i = sorted_list.size() - 2;  i > - 1; --i) {
+        for(size_t i = end - 2;  i > - 1; --i) {
             while(curr > optimal_size && !CCW(hull[curr - 2], hull[curr - 1], sorted_list[i])) {
                 --curr;
             }
@@ -85,6 +86,20 @@ bool InCircle(point a, point b, point c, point d) {
     double part4 = d.x * (a.y * (b() - c()) - b.y * (a() - c()) + c.y * (a() - b()) );
     return part1 - part2 + part3 - part4 > 0;
 }
+
+class VoronoiDiargam {
+public:
+    // end - excluding
+    explicit VoronoiDiargam(const std::vector<point> &point_set, size_t begin, size_t end) {
+        size_t split_key = (begin + end) / 2;
+
+    }
+private:
+    VoronoiDiargam Merge(const VoronoiDiargam &voron, const VoronoiDiargam &eagle) {
+
+    }
+private:
+};
 
 void prepare_data(std::vector<point> &data) {
     double x;
