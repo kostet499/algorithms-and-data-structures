@@ -30,6 +30,52 @@ struct point {
     }
 };
 
+// точки a, b, c формируют треугольник с обходом против часовой стрелки
+bool CCW(point a, point b, point c) {
+    return a.x * (b.y - c.y) - b.x * (a.y - c.y) + c.x * (a.y - b.y) > 0;
+}
+
+// мотивирован ими - реализовать самому не сложно по описанию
+// но они очень красиво оптимизировали сам алгоритм (чтобы кучи перекидок буфферов не было), так что просто слегка подсматривал
+// http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull
+class ConvexAndrew{
+public:
+    explicit ConvexAndrew(const std::vector<point> &sorted_list) {
+        hull.resize(2 * sorted_list.size());
+        size_t curr = 0;
+        for(size_t i = 0; i < sorted_list.size(); ++i) {
+            while(curr > 1 && !CCW(hull[curr - 2], hull[curr - 1], sorted_list[i])) {
+                --curr;
+            }
+            hull[curr] = sorted_list[i];
+            ++curr;
+        }
+
+        size_t optimal_size = curr;
+        // the last point will be already in the down list
+        for(size_t i = sorted_list.size() - 2;  i > - 1; --i) {
+            while(curr > optimal_size && !CCW(hull[curr - 2], hull[curr - 1], sorted_list[i])) {
+                --curr;
+            }
+            hull[curr] = sorted_list[i];
+            ++curr;
+        }
+        // hull is cycled
+        hull.resize(curr);
+    }
+
+    const point &operator[](size_t index) {
+        return hull[index];
+    }
+
+    size_t size() {
+        return hull.size() - 1;
+    }
+
+private:
+    std::vector<point> hull;
+};
+
 // without flip - simplified version
 class QuadEdge {
     using ptr = std::shared_ptr<QuadEdge>;
@@ -106,11 +152,6 @@ bool InCircle(point a, point b, point c, point d) {
     return part1 - part2 + part3 - part4 > 0;
 }
 
-// точки a, b, c формируют треугольник с обходом против часовой стрелки
-bool CCW(point a, point b, point c) {
-    return a.x * (b.y - c.y) - b.x * (a.y - c.y) + c.x * (a.y - b.y) > 0;
-}
-
 void prepare_data(std::vector<point> &data) {
     double x;
     double y;
@@ -118,6 +159,7 @@ void prepare_data(std::vector<point> &data) {
         std::cin >> y;
         data.emplace_back(point(x, y));
     }
+    // sorting by x-coord for Divide&Conquer + Andrew's monotone chain
     sort(data.begin(), data.end());
 }
 
