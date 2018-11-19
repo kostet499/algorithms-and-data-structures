@@ -127,6 +127,13 @@ public:
 
     friend void Splice(record &a, record &b);
 
+    void SetOrg(const record &rec, point org_to_set) {
+        rec.first->org[rec.second] = org_to_set;
+    }
+
+public:
+    static size_t delaunay_edges;
+    static std::vector<QuadEdge> mysquad;
 private:
     std::vector<record> next;
     std::vector<record> lnext;
@@ -161,7 +168,11 @@ bool LeftOf(point x, record edge) {
 }
 
 std::pair <record, record> Delaunay(const std::vector<point> &point_set, size_t left, size_t right) {
+    if(right - left == 2) {
+        QuadEdge new_edge;
+        QuadEdge::mysquad.emplace_back(new_edge);
 
+    }
 }
 
 void prepare_data(std::vector<point> &data) {
@@ -182,6 +193,8 @@ int main() {
 
     std::vector<point> dots;
     prepare_data(dots);
+    QuadEdge::delaunay_edges = 0;
 
+    std::cout << QuadEdge::delaunay_edges / dots.size();
     return 0;
 }
