@@ -76,79 +76,6 @@ private:
     std::vector<point> hull;
 };
 
-// without flip - simplified version
-class QuadEdge {
-    using ptr = std::shared_ptr<QuadEdge>;
-    using record = std::pair<ptr, size_t>;
-public:
-    // subdivision of sphere
-    QuadEdge() {
-        next.resize(4, record(this, 0));
-        lnext.resize(4, record(this, 0));
-        org.resize(4);
-
-        next[0].second = 0;
-        lnext[0].second = 2;
-        next[1].second = 3;
-        lnext[1].second = 1;
-        next[2].second = 2;
-        lnext[2].second = 0;
-        next[3].second = 1;
-        lnext[3].second = 3;
-    }
-
-    record Rot(const record &rec) {
-        return {rec.first, (rec.second + 1) & 3};
-    }
-
-    record Sym(const record &rec) {
-        return {rec.first, (rec.second + 2) & 3};
-    }
-
-    record RevRot(const record &rec) {
-        return {rec.first, (rec.second + 3) & 3};
-    }
-
-    record Onext(const record &rec) {
-        return rec.first->next[rec.second];
-    }
-
-    record Oprev(const record &rec) {
-        return Rot(Onext(Rot(rec)));
-    }
-
-    point Org(const record &rec) {
-        return org[rec.second];
-    }
-
-    point Dest(const record &rec) {
-        return Org(Sym(rec));
-    }
-
-    friend void Splice(record &a, record &b);
-
-    void SetOrg(const record &rec, point org_to_set) {
-        rec.first->org[rec.second] = org_to_set;
-    }
-
-public:
-    static size_t delaunay_edges;
-    static std::vector<QuadEdge> mysquad;
-private:
-    std::vector<record> next;
-    std::vector<record> lnext;
-    std::vector<point> org;
-};
-
-using ptr = std::shared_ptr<QuadEdge>;
-using record = std::pair<ptr, size_t>;
-
-void Splice(record &a, record &b) {
-    record temp =  b.first->Onext(b);
-    b.first->next[b.second] = a.first->Onext(a);
-    a.first->next[a.second] = temp;
-}
-
 // в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
 bool InCircle(point a, point b, point c, point d) {
     // считаем суперопределитель
@@ -157,22 +84,6 @@ bool InCircle(point a, point b, point c, point d) {
     double part3 = c.x * (a.y * (b() - d()) - b.y * (a() - d()) + d.y * (a() - b()) );
     double part4 = d.x * (a.y * (b() - c()) - b.y * (a() - c()) + c.y * (a() - b()) );
     return part1 - part2 + part3 - part4 > 0;
-}
-
-bool RightOf(point x, record edge) {
-    return CCW(x, edge.first->Dest(edge), edge.first->Org(edge));
-}
-
-bool LeftOf(point x, record edge) {
-    return CCW(x, edge.first->Org(edge), edge.first->Dest(edge));
-}
-
-std::pair <record, record> Delaunay(const std::vector<point> &point_set, size_t left, size_t right) {
-    if(right - left == 2) {
-        QuadEdge new_edge;
-        QuadEdge::mysquad.emplace_back(new_edge);
-
-    }
 }
 
 void prepare_data(std::vector<point> &data) {
@@ -193,8 +104,6 @@ int main() {
 
     std::vector<point> dots;
     prepare_data(dots);
-    QuadEdge::delaunay_edges = 0;
 
-    std::cout << QuadEdge::delaunay_edges / dots.size();
     return 0;
 }
