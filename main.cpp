@@ -152,6 +152,18 @@ bool InCircle(point a, point b, point c, point d) {
     return part1 - part2 + part3 - part4 > 0;
 }
 
+bool RightOf(point x, record edge) {
+    return CCW(x, edge.first->Dest(edge), edge.first->Org(edge));
+}
+
+bool LeftOf(point x, record edge) {
+    return CCW(x, edge.first->Org(edge), edge.first->Dest(edge));
+}
+
+std::pair <record, record> Delaunay(const std::vector<point> &point_set, size_t left, size_t right) {
+
+}
+
 void prepare_data(std::vector<point> &data) {
     double x;
     double y;
