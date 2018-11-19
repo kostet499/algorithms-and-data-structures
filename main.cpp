@@ -87,20 +87,6 @@ bool InCircle(point a, point b, point c, point d) {
     return part1 - part2 + part3 - part4 > 0;
 }
 
-class VoronoiDiargam {
-public:
-    // end - excluding
-    explicit VoronoiDiargam(const std::vector<point> &point_set, size_t begin, size_t end) {
-        size_t split_key = (begin + end) / 2;
-
-    }
-private:
-    VoronoiDiargam Merge(const VoronoiDiargam &voron, const VoronoiDiargam &eagle) {
-
-    }
-private:
-};
-
 void prepare_data(std::vector<point> &data) {
     double x;
     double y;
