@@ -76,7 +76,7 @@ rectangle minkovsky(const rectangle &rect1, const rectangle &rect2) {
     size_t index1 = 0;
     size_t index2 = 0;
 
-    while(index1 < rect1.size() && index2 < rect2.size()) {
+    while(index1 < rect1.size() || index2 < rect2.size()) {
         minkov.emplace_back(plus(rect1_resorted[index1], rect2_resorted[index2]));
         double ang = angle(minus(rect1_resorted[index1 + 1], rect1_resorted[index1]), minus(rect2_resorted[index2 + 1], rect2_resorted[index2]));
         //cout << angle1 << " " << angle2 << endl;
