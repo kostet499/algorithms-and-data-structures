@@ -87,6 +87,7 @@ bool InCircle(point a, point b, point c, point d) {
     return part1 - part2 + part3 - part4 > 0;
 }
 
+using line = std::pair<point, point>;
 class VoronoiDiargam {
 public:
     // end - excluding
@@ -94,10 +95,21 @@ public:
         size_t split_key = (begin + end) / 2;
         VoronoiDiargam voron(point_set, begin, split_key);
         VoronoiDiargam eagle(point_set, split_key, end);
-        Merge(*this, voron, eagle);
+        Merge(*this, voron, eagle, point_set, begin, end);
     }
 private:
-    VoronoiDiargam Merge(const VoronoiDiargam &result, const VoronoiDiargam &voron, const VoronoiDiargam &eagle) {
+    VoronoiDiargam Merge(const VoronoiDiargam &result, const VoronoiDiargam &voron, const VoronoiDiargam &eagle,
+                         const std::vector<point> &point_set, size_t begin, size_t end) {
+        size_t split_key = (begin + end) / 2;
+        // step 1
+        ConvexAndrew convex_voron(point_set, begin, split_key);
+        ConvexAndrew convex_eagle(point_set, split_key, end);
+
+        // step 2
+
+    }
+
+    line LowestCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) {
 
     }
 private:
