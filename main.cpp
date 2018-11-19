@@ -5,7 +5,7 @@
 #include <memory>
 
 /*
- * http://sccg.sk/~samuelcik/dgs/quad_edge.pdf
+ * http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/Voronoi/DivConqVor/divConqVor.htm
  */
 
 struct point {
@@ -92,10 +92,12 @@ public:
     // end - excluding
     explicit VoronoiDiargam(const std::vector<point> &point_set, size_t begin, size_t end) {
         size_t split_key = (begin + end) / 2;
-
+        VoronoiDiargam voron(point_set, begin, split_key);
+        VoronoiDiargam eagle(point_set, split_key, end);
+        Merge(*this, voron, eagle);
     }
 private:
-    VoronoiDiargam Merge(const VoronoiDiargam &voron, const VoronoiDiargam &eagle) {
+    VoronoiDiargam Merge(const VoronoiDiargam &result, const VoronoiDiargam &voron, const VoronoiDiargam &eagle) {
 
     }
 private:
@@ -119,6 +121,10 @@ int main() {
 
     std::vector<point> dots;
     prepare_data(dots);
-
+    // all sites are unbounded
+    if(dots.size() < 4) {
+        std::cout << 0;
+    }
+    VoronoiDiargam voron(dots, 0, dots.size());
     return 0;
 }
