@@ -7,6 +7,7 @@
 
 /*
  * http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/Voronoi/DivConqVor/divConqVor.htm
+ * https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=4567872&tag=1
  */
 
 struct point {
@@ -89,13 +90,19 @@ using line = std::pair<point, point>;
 class VoronoiDiargam {
 public:
     // end - excluding
-    explicit VoronoiDiargam(const std::vector<point> &point_set, size_t begin, size_t end) {
-        size_t split_key = (begin + end) / 2;
+    explicit VoronoiDiargam(const std::vector<point> &points, size_t begin, size_t end) : point_set(points){
         start = begin;
         finish = end;
+        if(end - begin == 2) {
+            build2();
+        }
+        else if(end - begin == 3) {
+            build3();
+        }
+        size_t split_key = (begin + end) / 2;
         VoronoiDiargam voron(point_set, begin, split_key);
         VoronoiDiargam eagle(point_set, split_key, end);
-        Merge(*this, voron, eagle, point_set, begin, end);
+        Merge(*this, voron, eagle, begin, end);
     }
 
     size_t Average() {
@@ -103,22 +110,20 @@ public:
         size_t limited_polygons = 0;
         for(auto &polygon : polygons) {
             bool trulik = true;
-            size_t sum = 0;
             for(auto &para : polygon) {
                 trulik &= para.second;
-                ++sum;
             }
             if(trulik) {
                 ++limited_polygons;
                 // because each polygon is cycled we get -1
-                limited_edges += sum - 1;
+                limited_edges += polygon.size();
             }
         }
         return limited_edges / limited_polygons;
     }
 private:
     VoronoiDiargam Merge(const VoronoiDiargam &result, const VoronoiDiargam &voron, const VoronoiDiargam &eagle,
-                         const std::vector<point> &point_set, size_t begin, size_t end) {
+            size_t begin, size_t end) {
         size_t split_key = (begin + end) / 2;
         // step 1
         ConvexAndrew convex_voron(point_set, begin, split_key);
@@ -135,17 +140,25 @@ private:
     line UpperCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) {
 
     }
+
+    void build2() {
+
+    }
+
+    void build3() {
+
+    }
 private:
     // храним диаграму для каждого сайта
-    // многоугольник вершин Вороного с обходом против часовой стрелки
+    // многоугольник ребер Вороного с обходом против часовой стрелки
     // для каждой вершины связно по индексации храним является ли она точкой или лишь направляющей бесконечного луча
     // во время обхода возникнет ребро между такими мнимыми точками, как то захэндлим
     size_t start;
     size_t finish;
 
     // можем нумеровать сайты в естественном порядке (по сортировке по x-коориднате, чтобы связать с нумерацией в массиве)
-    // cycled
-    std::vector<std::vector<std::pair<point, bool> > > polygons;
+    std::vector<std::vector<std::pair<line, bool> > > polygons;
+    const std::vector<point> &point_set;
 };
 
 void prepare_data(std::vector<point> &data) {
