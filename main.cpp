@@ -31,7 +31,7 @@ struct point {
     double operator()() const {
         return std::pow(this->x, 2) + std::pow(this->y, 2);
     }
-    point() : x(0), y(0) {
+    point() : x(0.0 / 0), y(0.0 / 0) {
     }
     friend double angle(const point &a, const point &b);
     friend bool is_counter(const point &a, const point &b, const point &c);
@@ -144,34 +144,87 @@ private:
 
     }
 
-    // k1 * k2 = -1 + k1 != inf (из условия нет точек на одной вертикали)
+    // duck this sheet
+    // line computations
+    // nans can then transfer to angles if dies
+    point Intersect(const line &a, const line &b) {
+        // coefs determination
+        double coefa = (a.first.y - a.second.y) / (a.first.x - a.second.x);
+        double coefb = (b.first.y - b.second.y) / (b.first.x - b.second.x);
+        if((is_zero(coefa) && is_zero(coefb)) || (std::isnan(coefa) && std::isnan(coefb))) {
+            return {};
+        }
+        // ap tries to point to horizontal, bp - to vertical
+        const line *ap = &a;
+        const line *bp = &b;
+        if(is_zero(coefb) || std::isnan(coefa)) {
+            std::swap(coefa, coefb);
+            std::swap(ap, bp);
+        }
+
+        if(is_zero(coefa) && std::isnan(coefb)) {
+            return {bp->first.x, ap->first.y};
+        }
+
+        // intercept
+        double intera = ap->first.y - coefa * ap->first.x;
+        double interb = bp->first.y - coefb * bp->first.x;
+        if(is_zero(coefa)) {
+            return {(ap->first.y - interb) / coefb, ap->first.y};
+        }
+
+        if(std::isnan(coefb)) {
+            return {bp->first.x, bp->first.x * coefa + intera};
+        }
+
+        double x = (interb - intera) / (coefa - coefb);
+        return {x, x * coefa + intera};
+    }
+
+    bool isOnLine(const point &dot, const line &b) {
+        if(std::isnan(dot.x) || std::isnan(dot.y)) {
+            return false;
+        }
+
+        double comparing_precision = 1e-10;
+        std::pair<double, double> x_coord = std::make_pair(std::min(b.first.x, b.second.x) - comparing_precision, std::max(b.first.x, b.second.x) + comparing_precision);
+        std::pair<double, double> y_coord = std::make_pair(std::min(b.first.x, b.second.x) - comparing_precision, std::max(b.first.x, b.second.x) + comparing_precision);
+
+        return dot.x > x_coord.first && dot.x < x_coord.second && dot.y > y_coord.first && dot.y < y_coord.second;
+    }
+
+    // k1 * k2 = -1
+    line BisectorLine(const line &a) {
+
+    }
+
+    bool is_zero(double value) {
+        return fabs(value) < 1e-10;
+    }
+
     void build2(size_t begin, size_t end) {
         double comparing_precision = 1e-10;
         polygons.resize(2);
-        point a = point_set[begin];
-        point b = point_set[begin + 1];
-        point middle = (a + b) * 0.5;
-        double coef1 = (b.y - a.y) / (b.x - a.x);
-        double coef2 = -1.0 / coef1;
-        point new_point = point(middle.x + 10.0, middle.y + 10.0 * coef2);
-        // vertical line because when coef1 = 0 - horizontal, then coef2 = inf = nan
-        if(fabs(b.y - a.y) < comparing_precision) {
-            new_point.x = middle.x;
-            new_point.y = middle.y + 10.0;
-        }
-        if(is_counter(a, b, new_point)) {
-            polygons[0].emplace_back(make_pair(line(middle, new_point), false));
-            polygons[1].emplace_back(make_pair(line(new_point, middle), false));
+        line temp = line(point_set[begin], point_set[begin + 1]);
+        line bis = BisectorLine(temp);
+        if(is_counter(temp.first, temp.second, bis.second)) {
+            polygons[0].emplace_back(make_pair(line(bis.first, bis.second), false));
+            polygons[1].emplace_back(make_pair(line(bis.second, bis.first), false));
         }
         else {
-            polygons[1].emplace_back(make_pair(line(middle, new_point), false));
-            polygons[0].emplace_back(make_pair(line(new_point, middle), false));
+            polygons[1].emplace_back(make_pair(line(bis.first, bis.second), false));
+            polygons[0].emplace_back(make_pair(line(bis.second, bis.first), false));
         }
     }
 
     // центр описанной около треугольника окружности
+    // пересечение двух серединных перпендикуляров
     void build3(size_t begin, size_t end) {
         polygons.resize(3);
+        point a = point_set[begin];
+        point b = point_set[begin + 1];
+        point c = point_set[begin + 2];
+
     }
 private:
     // храним диаграму для каждого сайта
