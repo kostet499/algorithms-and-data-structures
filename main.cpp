@@ -53,27 +53,27 @@ public:
         hull.resize(2 * (end - begin));
         size_t curr = 0;
         for(size_t i = begin; i < end; ++i) {
-            while(curr > 1 && !is_counter(hull[curr - 2], hull[curr - 1], sorted_list[i])) {
+            while(curr > 1 && !is_counter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
                 --curr;
             }
-            hull[curr] = sorted_list[i];
+            hull[curr] = i;
             ++curr;
         }
 
         size_t optimal_size = curr;
         // the last point will be already in the down list
         for(size_t i = end - 2;  i > - 1; --i) {
-            while(curr > optimal_size && !is_counter(hull[curr - 2], hull[curr - 1], sorted_list[i])) {
+            while(curr > optimal_size && !is_counter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
                 --curr;
             }
-            hull[curr] = sorted_list[i];
+            hull[curr] = i;
             ++curr;
         }
         // hull is cycled
         hull.resize(curr);
     }
 
-    const point &operator[](size_t index) {
+    const size_t &operator[](size_t index) {
         return hull[index];
     }
 
@@ -82,7 +82,7 @@ public:
     }
 
 private:
-    std::vector<point> hull;
+    std::vector<size_t> hull;
 };
 
 using line = std::pair<point, point>;
