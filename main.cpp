@@ -144,8 +144,9 @@ private:
 
     }
 
-    // k1 * k2 = -1 + k1 != 0 (из условия нет точек на одной вертикали)
+    // k1 * k2 = -1 + k1 != inf (из условия нет точек на одной вертикали)
     void build2(size_t begin, size_t end) {
+        double comparing_precision = 1e-10;
         polygons.resize(2);
         point a = point_set[begin];
         point b = point_set[begin + 1];
@@ -153,6 +154,11 @@ private:
         double coef1 = (b.y - a.y) / (b.x - a.x);
         double coef2 = -1.0 / coef1;
         point new_point = point(middle.x + 10.0, middle.y + 10.0 * coef2);
+        // vertical line because when coef1 = 0 - horizontal, then coef2 = inf = nan
+        if(fabs(b.y - a.y) < comparing_precision) {
+            new_point.x = middle.x;
+            new_point.y = middle.y + 10.0;
+        }
         if(is_counter(a, b, new_point)) {
             polygons[0].emplace_back(make_pair(line(middle, new_point), false));
             polygons[1].emplace_back(make_pair(line(new_point, middle), false));
@@ -163,6 +169,7 @@ private:
         }
     }
 
+    // центр описанной около треугольника окружности
     void build3(size_t begin, size_t end) {
         polygons.resize(3);
     }
