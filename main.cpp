@@ -22,6 +22,9 @@ struct point {
     point operator-(const point& b) const {
         return {this->x - b.x, this->y - b.y};
     }
+    point operator*(double number) const {
+        return {this->x * number, this->y * number};
+    }
     bool operator<(const point &b) const {
         return (this->x < b.x) || (this->x == b.x && this->y < b.y);
     }
@@ -94,10 +97,10 @@ public:
         start = begin;
         finish = end;
         if(end - begin == 2) {
-            build2();
+            build2(begin, end);
         }
         else if(end - begin == 3) {
-            build3();
+            build3(begin, end);
         }
         size_t split_key = (begin + end) / 2;
         VoronoiDiargam voron(point_set, begin, split_key);
@@ -141,12 +144,27 @@ private:
 
     }
 
-    void build2() {
-
+    // k1 * k2 = -1 + k1 != 0 (из условия нет точек на одной вертикали)
+    void build2(size_t begin, size_t end) {
+        polygons.resize(2);
+        point a = point_set[begin];
+        point b = point_set[begin + 1];
+        point middle = (a + b) * 0.5;
+        double coef1 = (b.y - a.y) / (b.x - a.x);
+        double coef2 = -1.0 / coef1;
+        point new_point = point(middle.x + 10.0, middle.y + 10.0 * coef2);
+        if(is_counter(a, b, new_point)) {
+            polygons[0].emplace_back(make_pair(line(middle, new_point), false));
+            polygons[1].emplace_back(make_pair(line(new_point, middle), false));
+        }
+        else {
+            polygons[1].emplace_back(make_pair(line(middle, new_point), false));
+            polygons[0].emplace_back(make_pair(line(new_point, middle), false));
+        }
     }
 
-    void build3() {
-
+    void build3(size_t begin, size_t end) {
+        polygons.resize(3);
     }
 private:
     // храним диаграму для каждого сайта
