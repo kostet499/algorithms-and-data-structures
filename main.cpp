@@ -28,11 +28,18 @@ struct point {
     }
     point() : x(0), y(0) {
     }
+    friend double angle(const point &a, const point &b);
+    friend bool is_counter(point &a, point &b, point &c);
 };
 
-// точки a, b, c формируют треугольник с обходом против часовой стрелки
-bool CCW(point a, point b, point c) {
-    return a.x * (b.y - c.y) - b.x * (a.y - c.y) + c.x * (a.y - b.y) > 0;
+double angle(const point &a, const point &b) {
+    double one = a.x * b.x + a.y * b.y;
+    double two = a.x * b.y - a.y * b.x;
+    return atan2(two, one);
+}
+
+bool is_counter(point &a,  point &b, point &c) {
+    return angle(b - a, c - a) > 0;
 }
 
 // мотивирован ими - реализовать самому не сложно по описанию
@@ -77,16 +84,6 @@ private:
     std::vector<point> hull;
 };
 
-// в принципе в случае 4 точек на одной окружности должен вообще стать нулём)
-bool InCircle(point a, point b, point c, point d) {
-    // считаем суперопределитель
-    double part1 = a.x * (b.y * (c() - d()) - c.y * (b() - d()) + d.y * (b() - c()) );
-    double part2 = b.x * (a.y * (c() - d()) - c.y * (a() - d()) + d.y * (a() - c()) );
-    double part3 = c.x * (a.y * (b() - d()) - b.y * (a() - d()) + d.y * (a() - b()) );
-    double part4 = d.x * (a.y * (b() - c()) - b.y * (a() - c()) + c.y * (a() - b()) );
-    return part1 - part2 + part3 - part4 > 0;
-}
-
 using line = std::pair<point, point>;
 class VoronoiDiargam {
 public:
@@ -112,7 +109,13 @@ private:
     line LowestCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) {
 
     }
+
+    line UpperCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) {
+
+    }
 private:
+    // doubtful section
+    // suppose that we can store diagram via
 };
 
 void prepare_data(std::vector<point> &data) {
@@ -133,10 +136,7 @@ int main() {
 
     std::vector<point> dots;
     prepare_data(dots);
-    // all sites are unbounded
-    if(dots.size() < 4) {
-        std::cout << 0;
-    }
+
     VoronoiDiargam voron(dots, 0, dots.size());
     return 0;
 }
