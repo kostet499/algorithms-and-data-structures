@@ -28,8 +28,11 @@ struct point {
     bool operator<(const point &b) const {
         return (this->x < b.x) || (this->x == b.x && this->y < b.y);
     }
-    double operator()() const {
+    double norm() const {
         return std::pow(this->x, 2) + std::pow(this->y, 2);
+    }
+    double scalar(const point &b) {
+        return this->x * b.x + this->y * b.y;
     }
     point() : x(std::nan("")), y(std::nan("")) {
     }
@@ -116,10 +119,28 @@ struct line {
             return false;
         }
 
-        std::pair<double, double> x_coord = std::make_pair(std::min(first.x, second.x) - comparing_precision, std::max(first.x, second.x) + comparing_precision);
-        std::pair<double, double> y_coord = std::make_pair(std::min(first.y, second.y) - comparing_precision, std::max(first.y, second.y) + comparing_precision);
+        // сразу проверяем на принадлежность отрезку, а потом будем фиксить бесконечные случаи
+        // неравенство треугольника фактически
+        if(IsZero((first - second).norm() - (first - dot).norm() - (second - dot).norm())) {
+            return true;
+        }
 
-        return dot.x > x_coord.first && dot.x < x_coord.second && dot.y > y_coord.first && dot.y < y_coord.second;
+        // проверка по уравнению
+        if(!IsZero(dot.y - dot.x * Tilt() - Intercept())) {
+            return false;
+        }
+
+        // просто прямая
+        if(fst_endless && scd_endless) {
+            return true;
+        }
+        // если это луч, то проекция должна быть положительна
+        else if(fst_endless) {
+            return (dot - second).scalar(first - second) > 0;
+        }
+        else if(scd_endless) {
+            return (dot - first).scalar(second - first) > 0;
+        }
     }
 
     bool HasInfinitPoint() const {
