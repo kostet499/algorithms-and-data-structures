@@ -73,7 +73,7 @@ struct line {
         return IsZero(first.y - second.y);
     }
 
-    point LineMiddle() const {
+    point Middle() const {
         return (first + second) * 0.5;
     }
 
@@ -120,12 +120,13 @@ struct line {
 
     bool HasInfinitPoint() const {
         return
-        std::min(fabs(first.x - endless), fabs(first.y - endless)) < 1e1 ||
-        std::min(fabs(second.x - endless), fabs(second.y - endless)) < 1e1;
+        std::min(fabs(fabs(first.x) - endless), fabs(fabs(first.y) - endless)) < 1e1 ||
+        std::min(fabs(fabs(second.x) - endless), fabs(fabs(second.y) - endless)) < 1e1;
     }
 
-    line RayWithPoint(const point &ray_start, const point &ray_point) const {
-        line left = line(first, ray_start); // i want to safe the line orientation don't know why
+    // делит линию по точке ray_start так, чтобы на ней остался отрезок [ray_start, ray_point]
+    line Split(const point &ray_start, const point &ray_point) const {
+        line left = line(ray_start, first);
         line right = line(ray_start, second);
         if(IsOnLine(ray_point)) {
             return left;
@@ -146,7 +147,7 @@ struct line {
     // k1 * k2 = -1
     // "endless" bisector line
     line BisectorLine() const {
-        point middle = LineMiddle();
+        point middle = Middle();
         if(IsVertical()) {
             // перендикуляр горизонтальный
             point bis1(-endless, middle.y);
@@ -290,11 +291,34 @@ private:
 
         line bis1 = ab.BisectorLine();
         line bis2 = bc.BisectorLine();
+        line bis3 = ca.BisectorLine();
 
+        // это же и есть вершина диаграмы
         point circle_center = line::Intersect(bis1, bis2);
 
-        // теперь нужно построить три луча
+        // теперь нужно построить три луча от центра окружности
+        line ray1 = bis1.Split(circle_center, ab.Middle());
+        line ray2 = bis2.Split(circle_center, bc.Middle());
+        line ray3 = bis3.Split(circle_center, ca.Middle());
 
+        // теперь нужно правильно вставить два луча в каждый полигон - против часовой стрелки
+        // так как точки отсорчены по x, вообще говоря есть два случая: вторая точка над прямой первой-третьей или нет
+        if(point::IsCounter(point_set[begin], point_set[begin + 2], point_set[begin + 1])) {
+            polygons[0].emplace_back(ray3.Sym());
+            polygons[0].emplace_back(ray1);
+            polygons[1].emplace_back(ray1.Sym());
+            polygons[1].emplace_back(ray2);
+            polygons[2].emplace_back(ray2.Sym());
+            polygons[2].emplace_back(ray3);
+        }
+        else {
+            polygons[0].emplace_back(ray1.Sym());
+            polygons[0].emplace_back(ray3);
+            polygons[1].emplace_back(ray2.Sym());
+            polygons[1].emplace_back(ray1);
+            polygons[2].emplace_back(ray3.Sym());
+            polygons[2].emplace_back(ray2);
+        }
     }
 private:
     // храним диаграму для каждого сайта
@@ -305,7 +329,7 @@ private:
     size_t finish;
 
     // можем нумеровать сайты в естественном порядке (по сортировке по x-коориднате, чтобы связать с нумерацией в массиве)
-    std::vector<std::vector<line> > polygons;
+    std::vector<std::list<line> > polygons;
     const std::vector<point> &point_set;
 };
 
