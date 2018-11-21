@@ -47,7 +47,7 @@ double point::Angle(const point &a, const point &b) {
 }
 
 bool point::IsCounter(const point &a, const point &b, const point &c) {
-    return Angle(b - a, c - a) > 0;
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) > 0;
 }
 
 struct line {
@@ -56,6 +56,10 @@ struct line {
     point second;
     bool fst_endless;
     bool scd_endless;
+
+    double norm() {
+        return (second - first).norm();
+    }
 
     line(const point &p1, const point &p2, bool fst, bool scd) : first(p1), second(p2), fst_endless(fst), scd_endless(scd){
     }
@@ -125,7 +129,17 @@ struct line {
         }
 
         // проверка по уравнению
-        if(!IsZero(dot.y - dot.x * Tilt() - Intercept())) {
+        if(IsHorizontal()) {
+            if(!IsZero(dot.y - first.y)) {
+                return false;
+            }
+        }
+        else if(IsVertical()) {
+            if(!IsZero(dot.x - first.x)) {
+                return false;
+            }
+        }
+        else if(!IsZero(dot.y - dot.x * Tilt() - Intercept())) {
             return false;
         }
 
@@ -150,7 +164,7 @@ struct line {
     line Split(const point &ray_start, const point &ray_point) const {
         line left = line(ray_start, first, false, fst_endless);
         line right = line(ray_start, second, false, scd_endless);
-        if(IsOnLine(ray_point)) {
+        if(left.IsOnLine(ray_point)) {
             return left;
         }
         else {
@@ -209,11 +223,11 @@ public:
 
         size_t optimal_size = curr;
         // the last point will be already in the down list
-        for(size_t i = end - 2;  i > - 1; --i) {
+        for(int i = static_cast<int>(end) - 2;  i > -1; --i) {
             while(curr > optimal_size && !point::IsCounter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
                 --curr;
             }
-            hull[curr] = i;
+            hull[curr] = static_cast<size_t >(i);
             ++curr;
         }
         // hull is cycled
@@ -284,7 +298,7 @@ public:
         for(int i = 0; i < andrew.size(); ++i) {
             limited_edges -= polygons[andrew[i]];
         }
-        return limited_edges / limited_polygons;
+        return (limited_polygons == 0 ? 0 :limited_edges / limited_polygons);
     }
 private:
     VoronoiDiargam Merge(const VoronoiDiargam &result, const VoronoiDiargam &voron, const VoronoiDiargam &eagle,
@@ -346,9 +360,21 @@ private:
         point circle_center = line::Intersect(bis1, bis2);
 
         // теперь нужно построить три луча от центра окружности
+        // если какой-то угол тупой, то нужно брать луч не содержащий точку центра стороны против тупого угла
+        // точки же не коллинеарны
         line ray1 = bis1.Split(circle_center, ab.Middle());
         line ray2 = bis2.Split(circle_center, bc.Middle());
         line ray3 = bis3.Split(circle_center, ca.Middle());
+
+        if(ca.norm() + bc.norm() - ab.norm() < 0) {
+            ray1 = bis1.Split(circle_center, circle_center * 2 - ab.Middle());
+        }
+        else if(ab.norm() + ca.norm() - bc.norm() < 0) {
+            ray2 = bis2.Split(circle_center, circle_center * 2 - bc.Middle());
+        }
+        else if(bc.norm() + ab.norm() - ca.norm() < 0) {
+            ray3 = bis3.Split(circle_center, circle_center * 2 - ca.Middle());
+        }
 
         // теперь нужно правильно вставить два луча в каждый полигон - против часовой стрелки
         // так как точки отсорчены по x, вообще говоря есть два случая: вторая точка над прямой первой-третьей или нет
@@ -389,9 +415,11 @@ private:
 void prepare_data(std::vector<point> &data) {
     double x;
     double y;
-    while(std::cin >> x) {
+    size_t counter = 0;
+    while(counter < 3 && std::cin >> x) {
         std::cin >> y;
         data.emplace_back(point(x, y));
+        ++counter;
     }
     // sorting by x-coord for Divide&Conquer + Andrew's monotone chain
     sort(data.begin(), data.end());
@@ -407,6 +435,7 @@ int main() {
     prepare_data(dots);
     std::vector<edge*> entry_edge(dots.size());
     VoronoiDiargam voron(dots, entry_edge, 0, dots.size());
+
     std::cout << voron.Average();
     return 0;
 }
