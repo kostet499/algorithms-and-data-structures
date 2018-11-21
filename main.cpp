@@ -8,6 +8,7 @@
 /*
  * http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/Voronoi/DivConqVor/divConqVor.htm
  * https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=4567872&tag=1
+ * http://sccg.sk/~samuelcik/dgs/quad_edge.pdf
  */
 
 struct point {
@@ -424,6 +425,83 @@ void prepare_data(std::vector<point> &data) {
     // sorting by x-coord for Divide&Conquer + Andrew's monotone chain
     sort(data.begin(), data.end());
 }
+
+bool InCircle(const point &a, const point &b, const point &c, const point &d) {
+    // считаем суперопределитель
+    double part1 = a.x * (b.y * (c.norm() - d.norm()) - c.y * (b.norm() - d.norm()) + d.y * (b.norm() - c.norm()) );
+    double part2 = b.x * (a.y * (c.norm() - d.norm()) - c.y * (a.norm() - d.norm()) + d.y * (a.norm() - c.norm()) );
+    double part3 = c.x * (a.y * (b.norm() - d.norm()) - b.y * (a.norm() - d.norm()) + d.y * (a.norm() - b.norm()) );
+    double part4 = d.x * (a.y * (b.norm() - c.norm()) - b.y * (a.norm() - c.norm()) + c.y * (a.norm() - b.norm()) );
+    return part1 - part2 + part3 - part4 > 0;
+}
+
+struct quad {
+    line direction;
+    size_t org;
+    size_t dst;
+    // это очень тонкий момент = трюк с памятью и вообще магия
+    quad *opposite = nullptr;
+    quad *next = nullptr;
+    quad *prev = nullptr;
+    quad *left = nullptr;
+    quad *right = nullptr;
+    quad *lprev = nullptr;
+    quad *rprev = nullptr;
+
+    // обычный объект
+    explicit quad(const line &linenin, size_t o, size_t d) : direction(linenin), org(o), dst(d) {
+    }
+
+    // вся топологическая магия воедино и, наверное, самая сложная функция
+    static quad *MakeEdge(const line &linenin, size_t o, size_t d) {
+        quad* squad = new quad(linenin, o, d);
+        squad->opposite = new quad(linenin.Sym(), d, o);
+
+        squad->left = squad->opposite;
+        squad->right = squad->opposite;
+        squad->next = squad;
+        squad->prev = squad;
+        // work in progress
+
+        return squad;
+    }
+
+    static void Splice(quad *one, quad *two) {
+        // code ...
+        std::swap(one->next, two->next);
+    }
+
+    static quad* Connect(quad *one, quad *two) {
+        quad *squad = MakeEdge(line(one->direction.second, two->direction.first), one->dst, two->org);
+        Splice(squad, one->left);
+        Splice(squad->opposite, two);
+        return squad;
+    }
+
+    void DeleteQuad() {
+        Splice(this, this->prev);
+        Splice(this->opposite, this->opposite->prev);
+        delete this->opposite;
+        delete this;
+    }
+
+    static bool RightOf(const point x, const quad *edgy) {
+        return point::IsCounter(x, edgy->direction.second, edgy->direction.first);
+    }
+
+    static bool LeftOf(const point x, const quad *edgy) {
+        return point::IsCounter(x, edgy->direction.first, edgy->direction.second);
+    }
+};
+
+// я разочаровался в своём методе - очень мутно и сложно, довай Деланау
+// делаем как дядки с топологии прописали
+class Delaunay {
+public:
+private:
+private:
+    const std::vector<point> &point_set;
+};
 
 double line::comparing_precision = 1e-10;
 int main() {
