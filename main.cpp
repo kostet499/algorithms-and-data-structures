@@ -50,7 +50,6 @@ bool point::IsCounter(const point &a, const point &b, const point &c) {
     return Angle(b - a, c - a) > 0;
 }
 
-
 struct line {
     static double comparing_precision;
     point first;
@@ -233,10 +232,23 @@ private:
     std::vector<size_t> hull;
 };
 
+struct edge {
+    line direction;
+    size_t site;
+    // это очень тонкий момент = трюк с памятью и вообще магия
+    edge *opposite = nullptr;
+    edge *next = nullptr;
+    // магия
+    explicit edge(const line &linenin, size_t web) : direction(linenin), site(web) {
+        next = this;
+    }
+};
+
 class VoronoiDiargam {
 public:
     // end - excluding
-    explicit VoronoiDiargam(const std::vector<point> &points, size_t begin, size_t end) : point_set(points){
+    explicit VoronoiDiargam(const std::vector<point> &points, std::vector<edge*> &entry, size_t begin, size_t end)
+    : point_set(points), entry_edge(entry) {
         start = begin;
         finish = end;
         if(end - begin == 2) {
@@ -248,8 +260,8 @@ public:
             return;
         }
         size_t split_key = (begin + end) / 2;
-        VoronoiDiargam voron(point_set, begin, split_key);
-        VoronoiDiargam eagle(point_set, split_key, end);
+        VoronoiDiargam voron(point_set, entry_edge, begin, split_key);
+        VoronoiDiargam eagle(point_set, entry_edge, split_key, end);
         Merge(*this, voron, eagle, begin, end);
     }
 
@@ -257,11 +269,20 @@ public:
         ConvexAndrew andrew(point_set, 0, point_set.size());
         size_t limited_polygons = point_set.size() - andrew.size();
         size_t limited_edges = 0;
-        for(auto &polygon : polygons) {
-            limited_edges += polygon.size();
+        std::vector<size_t> polygons(point_set.size(), 0);
+        for(edge *entry : entry_edge) {
+            edge *iter = entry;
+            do {
+                ++limited_edges;
+                ++polygons[iter->site];
+                // тут очищаю память, хз, должно работать
+                edge *kek = iter;
+                iter = iter->next;
+                delete kek;
+            } while(iter != entry);
         }
         for(int i = 0; i < andrew.size(); ++i) {
-            limited_edges -= polygons[andrew[i]].size();
+            limited_edges -= polygons[andrew[i]];
         }
         return limited_edges / limited_polygons;
     }
@@ -277,33 +298,42 @@ private:
 
     }
 
-    line LowestCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) const {
+    line LowestCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle) const {
 
     }
 
-    line UpperCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) const {
+    line UpperCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle) const {
 
+    }
+
+    void InsertEdges(size_t site, const line &a, const line &b) {
+        entry_edge[site] = new edge(a, site);
+        entry_edge[site]->next = new edge(b, site);
+        entry_edge[site]->next->next = entry_edge[site];
+    }
+
+    void MakeOpposite(edge* a, edge *b) {
+        a->opposite = b;
+        b->opposite = a;
     }
 
     void Build2(size_t begin, size_t end) {
-        double comparing_precision = 1e-10;
-        polygons.resize(2);
         line temp = line(point_set[begin], point_set[begin + 1]);
         line bisector = temp.BisectorLine();
         if(point::IsCounter(temp.first, temp.second, bisector.second)) {
-            polygons[0].emplace_back(bisector);
-            polygons[1].emplace_back(bisector.Sym());
+            entry_edge[begin] = new edge(bisector, begin);
+            entry_edge[begin + 1] = new edge(bisector.Sym(), begin + 1);
         }
         else {
-            polygons[0].emplace_back(bisector.Sym());
-            polygons[1].emplace_back(bisector);
+            entry_edge[begin] = new edge(bisector.Sym(), begin);
+            entry_edge[begin + 1] = new edge(bisector, begin + 1);
         }
+        MakeOpposite(entry_edge[begin], entry_edge[begin + 1]);
     }
 
     // центр описанной около треугольника окружности
     // пересечение двух серединных перпендикуляров
     void Build3(size_t begin, size_t end) {
-        polygons.resize(3);
         line ab(point_set[begin], point_set[begin + 1]);
         line bc(point_set[begin + 1], point_set[begin + 2]);
         line ca(point_set[begin + 2], point_set[begin]);
@@ -323,20 +353,22 @@ private:
         // теперь нужно правильно вставить два луча в каждый полигон - против часовой стрелки
         // так как точки отсорчены по x, вообще говоря есть два случая: вторая точка над прямой первой-третьей или нет
         if(point::IsCounter(point_set[begin], point_set[begin + 2], point_set[begin + 1])) {
-            polygons[0].emplace_back(ray3.Sym());
-            polygons[0].emplace_back(ray1);
-            polygons[1].emplace_back(ray1.Sym());
-            polygons[1].emplace_back(ray2);
-            polygons[2].emplace_back(ray2.Sym());
-            polygons[2].emplace_back(ray3);
+            InsertEdges(begin, ray3.Sym(), ray1);
+            InsertEdges(begin + 1, ray1.Sym(), ray2);
+            InsertEdges(begin + 2, ray2.Sym(), ray3);
+
+            MakeOpposite(entry_edge[begin], entry_edge[begin + 2]->next);
+            MakeOpposite(entry_edge[begin]->next, entry_edge[begin + 1]);
+            MakeOpposite(entry_edge[begin + 2], entry_edge[begin + 1]->next);
         }
         else {
-            polygons[0].emplace_back(ray1.Sym());
-            polygons[0].emplace_back(ray3);
-            polygons[1].emplace_back(ray2.Sym());
-            polygons[1].emplace_back(ray1);
-            polygons[2].emplace_back(ray3.Sym());
-            polygons[2].emplace_back(ray2);
+            InsertEdges(begin, ray1.Sym(), ray3);
+            InsertEdges(begin + 1, ray2.Sym(), ray1);
+            InsertEdges(begin + 2, ray3.Sym(), ray2);
+
+            MakeOpposite(entry_edge[begin], entry_edge[begin + 1]->next);
+            MakeOpposite(entry_edge[begin]->next, entry_edge[begin + 2]);
+            MakeOpposite(entry_edge[begin + 1], entry_edge[begin + 2]->next);
         }
     }
 private:
@@ -348,7 +380,9 @@ private:
     size_t finish;
 
     // можем нумеровать сайты в естественном порядке (по сортировке по x-коориднате, чтобы связать с нумерацией в массиве)
-    std::vector<std::list<line> > polygons;
+    // это не переменные класса, а лишь ссылка - магия да и только
+    edge *border;
+    std::vector<edge*> entry_edge;
     const std::vector<point> &point_set;
 };
 
@@ -371,8 +405,8 @@ int main() {
 
     std::vector<point> dots;
     prepare_data(dots);
-
-    VoronoiDiargam voron(dots, 0, dots.size());
+    std::vector<edge*> entry_edge(dots.size());
+    VoronoiDiargam voron(dots, entry_edge, 0, dots.size());
     std::cout << voron.Average();
     return 0;
 }
