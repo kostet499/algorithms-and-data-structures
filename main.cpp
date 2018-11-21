@@ -231,18 +231,14 @@ public:
     }
 
     size_t Average() {
+        ConvexAndrew andrew(point_set, 0, point_set.size());
+        size_t limited_polygons = point_set.size() - andrew.size();
         size_t limited_edges = 0;
-        size_t limited_polygons = 0;
         for(auto &polygon : polygons) {
-            bool trulik = true;
-            for(auto &para : polygon) {
-                trulik &= para.HasInfinitPoint();
-            }
-            if(trulik) {
-                ++limited_polygons;
-                // because each polygon is cycled we get -1
-                limited_edges += polygon.size();
-            }
+            limited_edges += polygon.size();
+        }
+        for(int i = 0; i < andrew.size(); ++i) {
+            limited_edges -= polygons[andrew[i]].size();
         }
         return limited_edges / limited_polygons;
     }
