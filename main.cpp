@@ -50,11 +50,15 @@ bool point::IsCounter(const point &a, const point &b, const point &c) {
 
 struct line {
     static double comparing_precision;
-    static double endless;
     point first;
     point second;
+    bool fst_endless;
+    bool scd_endless;
 
-    line(point p1, point p2) : first(p1), second(p2) {
+    line(const point &p1, const point &p2, bool fst, bool scd) : first(p1), second(p2), fst_endless(fst), scd_endless(scd){
+    }
+
+    line(const point &p1, const point &p2) : line(p1, p2, false, false) {
     }
 
     double Tilt() const {
@@ -119,15 +123,13 @@ struct line {
     }
 
     bool HasInfinitPoint() const {
-        return
-        std::min(fabs(fabs(first.x) - endless), fabs(fabs(first.y) - endless)) < 1e1 ||
-        std::min(fabs(fabs(second.x) - endless), fabs(fabs(second.y) - endless)) < 1e1;
+        return fst_endless || scd_endless;
     }
 
     // делит линию по точке ray_start так, чтобы на ней остался отрезок [ray_start, ray_point]
     line Split(const point &ray_start, const point &ray_point) const {
-        line left = line(ray_start, first);
-        line right = line(ray_start, second);
+        line left = line(ray_start, first, false, fst_endless);
+        line right = line(ray_start, second, false, scd_endless);
         if(IsOnLine(ray_point)) {
             return left;
         }
@@ -141,7 +143,7 @@ struct line {
     }
 
     line Sym() const {
-        return {second, first};
+        return {second, first, scd_endless, fst_endless};
     }
 
     // k1 * k2 = -1
@@ -150,21 +152,21 @@ struct line {
         point middle = Middle();
         if(IsVertical()) {
             // перендикуляр горизонтальный
-            point bis1(-endless, middle.y);
-            point bis2(endless, middle.y);
-            return {bis1, bis2};
+            point bis1(0, middle.y);
+            point bis2(10, middle.y);
+            return {bis1, bis2, true, true};
         }
 
         if(IsHorizontal()) {
             // перпендикуляр вертикальный
-            point bis1(middle.x, -endless);
-            point bis2(middle.x, endless);
-            return {bis1, bis2};
+            point bis1(middle.x, 0);
+            point bis2(middle.x, 10);
+            return {bis1, bis2, true, true};
         }
 
         double tilt = -1.0 / Tilt();
         double intercept = middle.y - middle.x * tilt;
-        return {point(-endless, -endless * tilt + intercept), point(endless, endless * tilt + intercept)};
+        return {point(0, intercept), point(10, 10 * tilt + intercept), true, true};
     }
 };
 
@@ -341,7 +343,6 @@ void prepare_data(std::vector<point> &data) {
 }
 
 double line::comparing_precision = 1e-10;
-double line::endless = 1e10;
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
