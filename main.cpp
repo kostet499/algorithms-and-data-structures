@@ -31,21 +31,141 @@ struct point {
     double operator()() const {
         return std::pow(this->x, 2) + std::pow(this->y, 2);
     }
-    point() : x(0.0 / 0), y(0.0 / 0) {
+    point() : x(std::nan("")), y(std::nan("")) {
     }
-    friend double angle(const point &a, const point &b);
-    friend bool is_counter(const point &a, const point &b, const point &c);
+    static double Angle(const point &a, const point &b);
+    static bool IsCounter(const point &a, const point &b, const point &c);
 };
 
-double angle(const point &a, const point &b) {
+double point::Angle(const point &a, const point &b) {
     double one = a.x * b.x + a.y * b.y;
     double two = a.x * b.y - a.y * b.x;
     return atan2(two, one);
 }
 
-bool is_counter(const point &a, const point &b, const point &c) {
-    return angle(b - a, c - a) > 0;
+bool point::IsCounter(const point &a, const point &b, const point &c) {
+    return Angle(b - a, c - a) > 0;
 }
+
+
+struct line {
+    static double comparing_precision;
+    static double endless;
+    point first;
+    point second;
+
+    line(point p1, point p2) : first(p1), second(p2) {
+    }
+
+    double Tilt() const {
+        return (first.y - second.y) / (first.x - second.x);
+    }
+
+    double Intercept() const {
+        return first.y - Tilt() * first.x;
+    }
+
+    bool IsVertical() const {
+        return IsZero(first.x - second.x);
+    }
+
+    bool IsHorizontal() const {
+        return IsZero(first.y - second.y);
+    }
+
+    point LineMiddle() const {
+        return (first + second) * 0.5;
+    }
+
+    // duck this sheet
+    // line computations
+    // no duckin'-cluckin' nans
+    static point Intersect(const line &a, const line &b) {
+        if((a.IsHorizontal() && b.IsHorizontal()) || (a.IsVertical() && b.IsVertical())) {
+            return {};
+        }
+        // ap tries to point to horizontal, bp - to vertical
+        const line *ap = &a;
+        const line *bp = &b;
+        if(b.IsHorizontal() || a.IsVertical()) {
+            std::swap(ap, bp);
+        }
+
+        if(ap->IsHorizontal() && bp->IsVertical()) {
+            return {bp->first.x, ap->first.y};
+        }
+
+        if(ap->IsHorizontal()) {
+            return {(ap->first.y - bp->Intercept()) / bp->Tilt(), ap->first.y};
+        }
+
+        if(bp->IsVertical()) {
+            return {bp->first.x, bp->first.x * ap->Tilt() + ap->Intercept()};
+        }
+
+        double x = (bp->Intercept() - ap->Intercept()) / (ap->Tilt() - bp->Tilt());
+        return {x, x * ap->Tilt() + ap->Intercept()};
+    }
+
+    bool IsOnLine(const point &dot) const {
+        if(std::isnan(dot.x) || std::isnan(dot.y)) {
+            return false;
+        }
+
+        std::pair<double, double> x_coord = std::make_pair(std::min(first.x, second.x) - comparing_precision, std::max(first.x, second.x) + comparing_precision);
+        std::pair<double, double> y_coord = std::make_pair(std::min(first.y, second.y) - comparing_precision, std::max(first.y, second.y) + comparing_precision);
+
+        return dot.x > x_coord.first && dot.x < x_coord.second && dot.y > y_coord.first && dot.y < y_coord.second;
+    }
+
+    bool HasInfinitPoint() const {
+        return
+        std::min(fabs(first.x - endless), fabs(first.y - endless)) < 1e1 ||
+        std::min(fabs(second.x - endless), fabs(second.y - endless)) < 1e1;
+    }
+
+    line RayWithPoint(const point &ray_start, const point &ray_point) const {
+        line left = line(first, ray_start); // i want to safe the line orientation don't know why
+        line right = line(ray_start, second);
+        if(IsOnLine(ray_point)) {
+            return left;
+        }
+        else {
+            return right;
+        }
+    }
+
+    static bool IsZero(double value) {
+        return fabs(value) < comparing_precision;
+    }
+
+    line Sym() const {
+        return {second, first};
+    }
+
+    // k1 * k2 = -1
+    // "endless" bisector line
+    line BisectorLine() const {
+        point middle = LineMiddle();
+        if(IsVertical()) {
+            // перендикуляр горизонтальный
+            point bis1(-endless, middle.y);
+            point bis2(endless, middle.y);
+            return {bis1, bis2};
+        }
+
+        if(IsHorizontal()) {
+            // перпендикуляр вертикальный
+            point bis1(middle.x, -endless);
+            point bis2(middle.x, endless);
+            return {bis1, bis2};
+        }
+
+        double tilt = -1.0 / Tilt();
+        double intercept = middle.y - middle.x * tilt;
+        return {point(-endless, -endless * tilt + intercept), point(endless, endless * tilt + intercept)};
+    }
+};
 
 // мотивирован ими - реализовать самому не сложно по описанию
 // но они очень красиво оптимизировали сам алгоритм (чтобы кучи перекидок буфферов не было), так что просто слегка подсматривал
@@ -57,7 +177,7 @@ public:
         hull.resize(2 * (end - begin));
         size_t curr = 0;
         for(size_t i = begin; i < end; ++i) {
-            while(curr > 1 && !is_counter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
+            while(curr > 1 && !point::IsCounter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
                 --curr;
             }
             hull[curr] = i;
@@ -67,7 +187,7 @@ public:
         size_t optimal_size = curr;
         // the last point will be already in the down list
         for(size_t i = end - 2;  i > - 1; --i) {
-            while(curr > optimal_size && !is_counter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
+            while(curr > optimal_size && !point::IsCounter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
                 --curr;
             }
             hull[curr] = i;
@@ -89,7 +209,6 @@ private:
     std::vector<size_t> hull;
 };
 
-using line = std::pair<point, point>;
 class VoronoiDiargam {
 public:
     // end - excluding
@@ -97,10 +216,12 @@ public:
         start = begin;
         finish = end;
         if(end - begin == 2) {
-            build2(begin, end);
+            Build2(begin, end);
+            return;
         }
-        else if(end - begin == 3) {
-            build3(begin, end);
+        if(end - begin == 3) {
+            Build3(begin, end);
+            return;
         }
         size_t split_key = (begin + end) / 2;
         VoronoiDiargam voron(point_set, begin, split_key);
@@ -114,7 +235,7 @@ public:
         for(auto &polygon : polygons) {
             bool trulik = true;
             for(auto &para : polygon) {
-                trulik &= para.second;
+                trulik &= para.HasInfinitPoint();
             }
             if(trulik) {
                 ++limited_polygons;
@@ -136,94 +257,43 @@ private:
 
     }
 
-    line LowestCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) {
+    line LowestCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) const {
 
     }
 
-    line UpperCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) {
+    line UpperCommonSupport(const ConvexAndrew& voron, const ConvexAndrew &eagle) const {
 
     }
 
-    // duck this sheet
-    // line computations
-    // nans can then transfer to angles if dies
-    point Intersect(const line &a, const line &b) {
-        // coefs determination
-        double coefa = (a.first.y - a.second.y) / (a.first.x - a.second.x);
-        double coefb = (b.first.y - b.second.y) / (b.first.x - b.second.x);
-        if((is_zero(coefa) && is_zero(coefb)) || (std::isnan(coefa) && std::isnan(coefb))) {
-            return {};
-        }
-        // ap tries to point to horizontal, bp - to vertical
-        const line *ap = &a;
-        const line *bp = &b;
-        if(is_zero(coefb) || std::isnan(coefa)) {
-            std::swap(coefa, coefb);
-            std::swap(ap, bp);
-        }
-
-        if(is_zero(coefa) && std::isnan(coefb)) {
-            return {bp->first.x, ap->first.y};
-        }
-
-        // intercept
-        double intera = ap->first.y - coefa * ap->first.x;
-        double interb = bp->first.y - coefb * bp->first.x;
-        if(is_zero(coefa)) {
-            return {(ap->first.y - interb) / coefb, ap->first.y};
-        }
-
-        if(std::isnan(coefb)) {
-            return {bp->first.x, bp->first.x * coefa + intera};
-        }
-
-        double x = (interb - intera) / (coefa - coefb);
-        return {x, x * coefa + intera};
-    }
-
-    bool isOnLine(const point &dot, const line &b) {
-        if(std::isnan(dot.x) || std::isnan(dot.y)) {
-            return false;
-        }
-
-        double comparing_precision = 1e-10;
-        std::pair<double, double> x_coord = std::make_pair(std::min(b.first.x, b.second.x) - comparing_precision, std::max(b.first.x, b.second.x) + comparing_precision);
-        std::pair<double, double> y_coord = std::make_pair(std::min(b.first.x, b.second.x) - comparing_precision, std::max(b.first.x, b.second.x) + comparing_precision);
-
-        return dot.x > x_coord.first && dot.x < x_coord.second && dot.y > y_coord.first && dot.y < y_coord.second;
-    }
-
-    // k1 * k2 = -1
-    line BisectorLine(const line &a) {
-
-    }
-
-    bool is_zero(double value) {
-        return fabs(value) < 1e-10;
-    }
-
-    void build2(size_t begin, size_t end) {
+    void Build2(size_t begin, size_t end) {
         double comparing_precision = 1e-10;
         polygons.resize(2);
         line temp = line(point_set[begin], point_set[begin + 1]);
-        line bis = BisectorLine(temp);
-        if(is_counter(temp.first, temp.second, bis.second)) {
-            polygons[0].emplace_back(make_pair(line(bis.first, bis.second), false));
-            polygons[1].emplace_back(make_pair(line(bis.second, bis.first), false));
+        line bisector = temp.BisectorLine();
+        if(point::IsCounter(temp.first, temp.second, bisector.second)) {
+            polygons[0].emplace_back(bisector);
+            polygons[1].emplace_back(bisector.Sym());
         }
         else {
-            polygons[1].emplace_back(make_pair(line(bis.first, bis.second), false));
-            polygons[0].emplace_back(make_pair(line(bis.second, bis.first), false));
+            polygons[0].emplace_back(bisector.Sym());
+            polygons[1].emplace_back(bisector);
         }
     }
 
     // центр описанной около треугольника окружности
     // пересечение двух серединных перпендикуляров
-    void build3(size_t begin, size_t end) {
+    void Build3(size_t begin, size_t end) {
         polygons.resize(3);
-        point a = point_set[begin];
-        point b = point_set[begin + 1];
-        point c = point_set[begin + 2];
+        line ab(point_set[begin], point_set[begin + 1]);
+        line bc(point_set[begin + 1], point_set[begin + 2]);
+        line ca(point_set[begin + 2], point_set[begin]);
+
+        line bis1 = ab.BisectorLine();
+        line bis2 = bc.BisectorLine();
+
+        point circle_center = line::Intersect(bis1, bis2);
+
+        // теперь нужно построить три луча
 
     }
 private:
@@ -235,7 +305,7 @@ private:
     size_t finish;
 
     // можем нумеровать сайты в естественном порядке (по сортировке по x-коориднате, чтобы связать с нумерацией в массиве)
-    std::vector<std::vector<std::pair<line, bool> > > polygons;
+    std::vector<std::vector<line> > polygons;
     const std::vector<point> &point_set;
 };
 
@@ -250,6 +320,8 @@ void prepare_data(std::vector<point> &data) {
     sort(data.begin(), data.end());
 }
 
+double line::comparing_precision = 1e-10;
+double line::endless = 1e10;
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
