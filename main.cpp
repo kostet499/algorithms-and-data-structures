@@ -395,34 +395,27 @@ private:
         std::vector<line> chain;
         std::vector<std::pair<size_t, size_t> > border;
         // step 3
-        // бесконечное ребро сверху
+        // луч сверху
         line bisector = line(point_set[upper.first], point_set[upper.second]).BisectorLine();
-        edge *left = Intersect(zig_zag.first, bisector);
-        edge *right = Intersect(zig_zag.second, bisector);
-        point left_inter = left == nullptr ? point() : line::Intersect(left->direction, bisector);
-        point right_inter = right == nullptr ? point() : line::Intersect(right->direction, bisector);
-        point upper_point;
+
         border.emplace_back(zig_zag);
+        point upper_point = ChainStep(bisector, zig_zag);
 
-
-        if(std::isnan(left_inter.y) && std::isnan(right_inter.y)) {
-            // коллинеарные сайты, по условию такого быть не должно по идее, пока хэндла не придумал
-            throw;
-        }
-        else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) && left_inter.y > right_inter.y)) {
-            upper_point = left_inter;
-            zig_zag.first = left->opposite->site;
-        }
-        else {
-            upper_point = right_inter;
-            zig_zag.second = right->opposite->site;
-        }
         // добавляем верхний луч в цепь
-        chain.emplace_back(line(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true));
+        chain.emplace_back(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true);
 
         // step 4
         while(zig_zag != lower) {
+            bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
+            border.emplace_back(zig_zag);
+            point down_point = ChainStep(bisector, zig_zag);
+
+            // temp на самом деле луч из-за специфики Split, так что пушнуть его напрямую нельзя
+            // базовый конструктор от его точек даст отрезок
+            line temp = bisector.Split(down_point, upper_point);
+            chain.emplace_back(temp.first, temp.second);
+            upper_point = down_point;
         }
         // step 5
 
@@ -430,8 +423,28 @@ private:
 
     }
 
+    point ChainStep(const line &bisector, std::pair<size_t, size_t> &zig_zag) const {
+        edge *left = Intersect(zig_zag.first, bisector);
+        edge *right = Intersect(zig_zag.second, bisector);
+        point left_inter = left == nullptr ? point() : line::Intersect(left->direction, bisector);
+        point right_inter = right == nullptr ? point() : line::Intersect(right->direction, bisector);
+
+        if(std::isnan(left_inter.y) && std::isnan(right_inter.y)) {
+            // коллинеарные сайты, по условию такого быть не должно по идее, пока хэндла не придумал
+            throw;
+        }
+        else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) && left_inter.y > right_inter.y)) {
+            zig_zag.first = left->opposite->site;
+            return left_inter;
+        }
+        else {
+            zig_zag.second = right->opposite->site;
+            return right_inter;
+        }
+    }
+
     // returns the first one edge from the above (top y-coord) to be intersected by line parameter
-    edge *Intersect(size_t site, const line &inter) {
+    edge *Intersect(size_t site, const line &inter) const {
         double y = -1000000;
         edge *top_edge = nullptr;
         edge *entry = entry_edge[site];
@@ -545,7 +558,7 @@ void prepare_data(std::vector<point> &data) {
     size_t counter = 0;
     while(counter < 3 && std::cin >> x) {
         std::cin >> y;
-        data.emplace_back(point(x, y));
+        data.emplace_back(x, y);
         ++counter;
     }
     // sorting by x-coord for Divide&Conquer + Andrew's monotone chain
