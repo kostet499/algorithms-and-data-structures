@@ -32,6 +32,9 @@ struct point {
     double norm() const {
         return std::pow(this->x, 2) + std::pow(this->y, 2);
     }
+    double dist() const {
+        return std::sqrt(norm());
+    }
     double scalar(const point &b) {
         return this->x * b.x + this->y * b.y;
     }
@@ -66,8 +69,12 @@ struct line {
                 (IsZero((b.first - this->second).norm()) && IsZero((b.second - this->first).norm())));
     }
 
-    double norm() {
+    double norm() const {
         return (second - first).norm();
+    }
+
+    double dist() const {
+        return (second - first).dist();
     }
 
     line(const point &p1, const point &p2, bool fst, bool scd) : first(p1), second(p2), fst_endless(fst), scd_endless(scd){
@@ -133,7 +140,7 @@ struct line {
 
         // сразу проверяем на принадлежность отрезку, а потом будем фиксить бесконечные случаи
         // неравенство треугольника фактически
-        if(IsZero((first - second).norm() - (first - dot).norm() - (second - dot).norm())) {
+        if(IsZero(dist() - (first - dot).dist() - (second - dot).dist())) {
             return true;
         }
 
