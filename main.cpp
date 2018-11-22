@@ -388,7 +388,63 @@ private:
         ConvexAndrew convex_eagle(point_set, split_key, end);
 
         // step 2
+        auto lower = ConvexAndrew::LowestCommonSupport(convex_voron, convex_eagle, point_set);
+        auto upper = ConvexAndrew::UpperCommonSupport(convex_voron, convex_eagle, point_set);
 
+        auto zig_zag = upper;
+        std::vector<line> chain;
+        std::vector<std::pair<size_t, size_t> > border;
+        // step 3
+        // бесконечное ребро сверху
+        line bisector = line(point_set[upper.first], point_set[upper.second]).BisectorLine();
+        edge *left = Intersect(zig_zag.first, bisector);
+        edge *right = Intersect(zig_zag.second, bisector);
+        point left_inter = left == nullptr ? point() : line::Intersect(left->direction, bisector);
+        point right_inter = right == nullptr ? point() : line::Intersect(right->direction, bisector);
+        point upper_point;
+        border.emplace_back(zig_zag);
+
+
+        if(std::isnan(left_inter.y) && std::isnan(right_inter.y)) {
+            // коллинеарные сайты, по условию такого быть не должно по идее, пока хэндла не придумал
+            throw;
+        }
+        else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) && left_inter.y > right_inter.y)) {
+            upper_point = left_inter;
+            zig_zag.first = left->opposite->site;
+        }
+        else {
+            upper_point = right_inter;
+            zig_zag.second = right->opposite->site;
+        }
+        // добавляем верхний луч в цепь
+        chain.emplace_back(line(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true));
+
+        // step 4
+        while(zig_zag != lower) {
+
+        }
+        // step 5
+
+        // step 6
+
+    }
+
+    // returns the first one edge from the above (top y-coord) to be intersected by line parameter
+    edge *Intersect(size_t site, const line &inter) {
+        double y = -1000000;
+        edge *top_edge = nullptr;
+        edge *entry = entry_edge[site];
+        edge *iter = entry;
+        do {
+            point inter_dot = line::Intersect(iter->direction, inter);
+            if(!std::isnan(inter_dot.y) && inter_dot.y > y &&
+                iter->direction.IsOnLine(inter_dot) && inter.IsOnLine(inter_dot)) {
+                top_edge = iter;
+            }
+            iter = iter->next;
+        } while (iter != entry);
+        return top_edge;
     }
 
     void InsertEdges(size_t site, const line &a, const line &b) {
@@ -504,74 +560,6 @@ bool InCircle(const point &a, const point &b, const point &c, const point &d) {
     double part4 = d.x * (a.y * (b.norm() - c.norm()) - b.y * (a.norm() - c.norm()) + c.y * (a.norm() - b.norm()) );
     return part1 - part2 + part3 - part4 > 0;
 }
-
-struct quad {
-    line direction;
-    size_t org;
-    size_t dst;
-    // это очень тонкий момент = трюк с памятью и вообще магия
-    quad *opposite = nullptr;
-    quad *next = nullptr;
-    quad *prev = nullptr;
-    quad *left = nullptr;
-    quad *right = nullptr;
-    quad *lprev = nullptr;
-    quad *rprev = nullptr;
-
-    // обычный объект
-    explicit quad(const line &linenin, size_t o, size_t d) : direction(linenin), org(o), dst(d) {
-    }
-
-    // вся топологическая магия воедино и, наверное, самая сложная функция
-    static quad *MakeEdge(const line &linenin, size_t o, size_t d) {
-        quad* squad = new quad(linenin, o, d);
-        squad->opposite = new quad(linenin.Sym(), d, o);
-
-        squad->left = squad->opposite;
-        squad->right = squad->opposite;
-        squad->next = squad;
-        squad->prev = squad;
-        // work in progress
-
-        return squad;
-    }
-
-    static void Splice(quad *one, quad *two) {
-        // code ...
-        std::swap(one->next, two->next);
-    }
-
-    static quad* Connect(quad *one, quad *two) {
-        quad *squad = MakeEdge(line(one->direction.second, two->direction.first), one->dst, two->org);
-        Splice(squad, one->left);
-        Splice(squad->opposite, two);
-        return squad;
-    }
-
-    void DeleteQuad() {
-        Splice(this, this->prev);
-        Splice(this->opposite, this->opposite->prev);
-        delete this->opposite;
-        delete this;
-    }
-
-    static bool RightOf(const point x, const quad *edgy) {
-        return point::IsCounter(x, edgy->direction.second, edgy->direction.first);
-    }
-
-    static bool LeftOf(const point x, const quad *edgy) {
-        return point::IsCounter(x, edgy->direction.first, edgy->direction.second);
-    }
-};
-
-// я разочаровался в своём методе - очень мутно и сложно, довай Деланау
-// делаем как дядки с топологии прописали
-class Delaunay {
-public:
-private:
-private:
-    const std::vector<point> &point_set;
-};
 
 double line::comparing_precision = 1e-10;
 int main() {
