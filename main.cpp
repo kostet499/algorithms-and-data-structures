@@ -425,8 +425,15 @@ private:
             upper_point = down_point;
         }
         // step 5
+        bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]);
+
+        border.emplace_back(zig_zag);
+        // no ChainStep here, because upper_point is just what we need now
+        // луч снизу
+        chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10), upper_point, true, false);
 
         // step 6
+        // duck the sick / sosipisos /
 
     }
 
