@@ -58,6 +58,14 @@ struct line {
     bool fst_endless;
     bool scd_endless;
 
+    bool operator==(const line &b) const {
+        return
+        this->fst_endless == b.fst_endless &&
+        this->scd_endless == b.scd_endless &&
+                ((IsZero((b.first - this->first).norm()) && IsZero((b.second - this->second).norm())) ||
+                (IsZero((b.first - this->second).norm()) && IsZero((b.second - this->first).norm())));
+    }
+
     double norm() {
         return (second - first).norm();
     }
@@ -231,16 +239,86 @@ public:
             hull[curr] = static_cast<size_t >(i);
             ++curr;
         }
-        // hull is cycled
-        hull.resize(curr);
+        // hull is not cycled
+        hull.resize(curr - 1);
     }
 
     const size_t &operator[](size_t index) {
         return hull[index];
     }
 
-    size_t size() {
-        return hull.size() - 1;
+    size_t size() const {
+        return hull.size();
+    }
+
+    // clock
+    size_t prev(size_t index) const {
+        return index == 0 ? size() : index - 1;
+    }
+
+    // counterclock
+    size_t next(size_t index) const {
+        return index == size() - 1 ? 0 : index + 1;
+    }
+
+    static std::pair<size_t, size_t> LowestCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle, const std::vector<point> &point_set) {
+        size_t left = voron.XMax(point_set);
+        size_t right = eagle.XMin(point_set);
+        bool change = true;
+        while(change) {
+            change = false;
+            size_t lnext = voron.prev(left);
+            size_t rnext = eagle.next(right);
+            if(!point::IsCounter(point_set[left], point_set[right], point_set[lnext])) {
+                change = true;
+                left = lnext;
+            }
+            if(!point::IsCounter(point_set[left], point_set[right], point_set[rnext])) {
+                change = true;
+                right = rnext;
+            }
+        }
+        return {left, right};
+    }
+
+    static std::pair<size_t, size_t> UpperCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle, const std::vector<point> &point_set) {
+        size_t left = voron.XMax(point_set);
+        size_t right = eagle.XMin(point_set);
+        bool change = true;
+        while(change) {
+            change = false;
+            size_t lnext = voron.next(left);
+            size_t rnext = eagle.prev(right);
+            if(point::IsCounter(point_set[left], point_set[right], point_set[lnext])) {
+                change = true;
+                left = lnext;
+            }
+            if(point::IsCounter(point_set[left], point_set[right], point_set[rnext])) {
+                change = true;
+                right = rnext;
+            }
+        }
+        return {left, right};
+    }
+
+    size_t XMin(const std::vector<point> &point_set) const {
+        size_t index = 0;
+        for(size_t i = 1; i < hull.size(); ++i) {
+            if(point_set[hull[i]].x < point_set[hull[index]].x) {
+                index = i;
+            }
+        }
+        return index;
+    }
+
+    size_t XMax(const std::vector<point> &point_set) const {
+        size_t index = 0;
+        for(size_t i = 1; i < hull.size(); ++i) {
+            if(point_set[hull[i]].x > point_set[hull[index]].x) {
+                index = i;
+            }
+        }
+        return index;
     }
 
 private:
@@ -310,14 +388,6 @@ private:
         ConvexAndrew convex_eagle(point_set, split_key, end);
 
         // step 2
-
-    }
-
-    line LowestCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle) const {
-
-    }
-
-    line UpperCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle) const {
 
     }
 
