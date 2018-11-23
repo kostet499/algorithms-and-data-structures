@@ -349,20 +349,7 @@ public:
     // end - excluding
     explicit VoronoiDiargam(const std::vector<point> &points, std::vector<edge*> &entry, size_t begin, size_t end)
     : point_set(points), entry_edge(entry) {
-        start = begin;
-        finish = end;
-        if(end - begin == 2) {
-            Build2(begin, end);
-            return;
-        }
-        if(end - begin == 3) {
-            Build3(begin, end);
-            return;
-        }
-        size_t split_key = (begin + end) / 2;
-        VoronoiDiargam voron(point_set, entry_edge, begin, split_key);
-        VoronoiDiargam eagle(point_set, entry_edge, split_key, end);
-        Merge(*this, voron, eagle, begin, end);
+        Build(begin, end);
     }
 
     size_t Average() {
@@ -387,9 +374,22 @@ public:
         return (limited_polygons == 0 ? 0 :limited_edges / limited_polygons);
     }
 private:
-    VoronoiDiargam Merge(const VoronoiDiargam &result, const VoronoiDiargam &voron, const VoronoiDiargam &eagle,
-            size_t begin, size_t end) {
+    void Build(size_t begin, size_t end) {
+        if(end - begin == 2) {
+            Build2(begin, begin + 1);
+            return;
+        }
+        if(end - begin == 3) {
+            Build3(begin, end);
+            return;
+        }
         size_t split_key = (begin + end) / 2;
+        Build(begin, split_key);
+        Build(split_key, end);
+        Merge(begin, end, split_key);
+    }
+
+    void Merge(size_t begin, size_t end, size_t split_key) {
         // step 1
         ConvexAndrew convex_voron(point_set, begin, split_key);
         ConvexAndrew convex_eagle(point_set, split_key, end);
@@ -407,14 +407,17 @@ private:
 
         border.emplace_back(zig_zag);
         point upper_point = ChainStep(bisector, zig_zag);
-
+        if(std::isnan(upper_point.y)) {
+            // коллинеарный случай - значит мы можем просто запустить Build2
+            Build2(zig_zag.first, zig_zag.second);
+            return;
+        }
         // добавляем верхний луч в цепь
         chain.emplace_back(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true);
 
-        bool not_ray = true;
+
         // step 4
         while(zig_zag != lower) {
-            not_ray = false;
             bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
             border.emplace_back(zig_zag);
@@ -427,18 +430,13 @@ private:
             upper_point = down_point;
         }
         // step 5
-        if(not_ray) {
-            chain[0].fst_endless = true;
-        }
-        else {
-            bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]);
+        bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]);
 
-            border.emplace_back(zig_zag);
-            // no ChainStep here, because upper_point is just what we need now
-            // луч снизу
-            chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10),
-                               upper_point, true, false);
-        }
+        border.emplace_back(zig_zag);
+        // no ChainStep here, because upper_point is just what we need now
+        // луч снизу
+        chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10),
+                upper_point, true, false);
         // step 6
         // duck the sick / sosipisos /
         // предполагается, что полигональная кривая имеет ребра направленные неявно (первая т., вторая т.)
@@ -454,7 +452,7 @@ private:
 
         if(std::isnan(left_inter.y) && std::isnan(right_inter.y)) {
             // коллинеарные сайты, по условию такого быть не должно по идее, пока хэндла не придумал
-            throw;
+            return {};
         }
         else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) &&
                 ((line::IsZero(left_inter.y  - right_inter.y) && left_inter.x > right_inter.x) ||
@@ -496,18 +494,18 @@ private:
         b->opposite = a;
     }
 
-    void Build2(size_t begin, size_t end) {
-        line temp = line(point_set[begin], point_set[begin + 1]);
+    void Build2(size_t first, size_t second) {
+        line temp = line(point_set[first], point_set[second]);
         line bisector = temp.BisectorLine();
         if(point::IsCounter(temp.first, temp.second, bisector.second)) {
-            entry_edge[begin] = new edge(bisector, begin);
-            entry_edge[begin + 1] = new edge(bisector.Sym(), begin + 1);
+            entry_edge[first] = new edge(bisector, first);
+            entry_edge[second] = new edge(bisector.Sym(), second);
         }
         else {
-            entry_edge[begin] = new edge(bisector.Sym(), begin);
-            entry_edge[begin + 1] = new edge(bisector, begin + 1);
+            entry_edge[first] = new edge(bisector.Sym(), first);
+            entry_edge[second] = new edge(bisector, second);
         }
-        MakeOpposite(entry_edge[begin], entry_edge[begin + 1]);
+        MakeOpposite(entry_edge[first], entry_edge[second]);
     }
 
     // центр описанной около треугольника окружности
@@ -567,12 +565,9 @@ private:
     // многоугольник ребер Вороного с обходом против часовой стрелки
     // для каждой вершины связно по индексации храним является ли она точкой или лишь направляющей бесконечного луча
     // во время обхода возникнет ребро между такими мнимыми точками, как то захэндлим
-    size_t start;
-    size_t finish;
 
     // можем нумеровать сайты в естественном порядке (по сортировке по x-коориднате, чтобы связать с нумерацией в массиве)
     // это не переменные класса, а лишь ссылка - магия да и только
-    edge *border;
     std::vector<edge*> entry_edge;
     const std::vector<point> &point_set;
 };
