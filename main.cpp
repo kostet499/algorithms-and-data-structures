@@ -4,6 +4,7 @@
 #include <cmath>
 #include <memory>
 #include <list>
+#include <fstream>
 
 /*
  * http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/Voronoi/DivConqVor/divConqVor.htm
@@ -180,6 +181,14 @@ struct line {
     line Split(const point &ray_start, const point &ray_point) const {
         line left = line(ray_start, first, false, fst_endless);
         line right = line(ray_start, second, false, scd_endless);
+        if(fst_endless) {
+            left.second = ray_start + first - second;
+        }
+
+        if(scd_endless) {
+            right.second = ray_start + second - first;
+        }
+
         if(left.IsOnLine(ray_point)) {
             return left;
         }
@@ -332,7 +341,8 @@ private:
     std::vector<size_t> hull;
 };
 
-struct edge {
+class edge {
+public:
     line direction;
     size_t site;
     // это очень тонкий момент = трюк с памятью и вообще магия
@@ -372,6 +382,24 @@ public:
             limited_edges -= polygons[andrew[i]];
         }
         return (limited_polygons == 0 ? 0 :limited_edges / limited_polygons);
+    }
+
+    void LoadCSV(const char *filename) {
+        std::ofstream out;
+        out.open(filename);
+        out << "fx;fy;sx;sy;fst;scd" << std::endl;
+        for(edge *entry : entry_edge) {
+            edge *iter = entry;
+            do {
+                out << iter->direction.first.x << ";" << iter->direction.first.y << ";";
+                out << iter->direction.second.x << ";" << iter->direction.second.y << ";";
+                out << static_cast<int>(iter->direction.fst_endless) << ";" << static_cast<int>(iter->direction.scd_endless);
+
+                out << std::endl;
+                iter = iter->next;
+            } while(iter != entry);
+        }
+        out.close();
     }
 private:
     void Build(size_t begin, size_t end) {
@@ -568,7 +596,7 @@ private:
 
     // можем нумеровать сайты в естественном порядке (по сортировке по x-коориднате, чтобы связать с нумерацией в массиве)
     // это не переменные класса, а лишь ссылка - магия да и только
-    std::vector<edge*> entry_edge;
+    std::vector<edge*> &entry_edge;
     const std::vector<point> &point_set;
 };
 
@@ -581,6 +609,23 @@ void prepare_data(std::vector<point> &data) {
         data.emplace_back(x, y);
         ++counter;
     }
+    // sorting by x-coord for Divide&Conquer + Andrew's monotone chain
+    sort(data.begin(), data.end());
+}
+
+void prepare_test_data(std::vector<point> &data, const char *filename) {
+    double x;
+    double y;
+    std::ifstream in;
+    in.open(filename);
+    char c;
+    in >> c;
+    in >> c;
+    while(in >> x) {
+        in >> y;
+        data.emplace_back(x, y);
+    }
+    in.close();
     // sorting by x-coord for Divide&Conquer + Andrew's monotone chain
     sort(data.begin(), data.end());
 }
@@ -599,11 +644,13 @@ int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     std::cout.tie(nullptr);
-
     std::vector<point> dots;
-    prepare_data(dots);
+    //prepare_data(dots);
+    prepare_test_data(dots, "test");
     std::vector<edge*> entry_edge(dots.size());
     VoronoiDiargam voron(dots, entry_edge, 0, dots.size());
+
+    voron.LoadCSV("visualisation_data.csv");
 
     std::cout << voron.Average();
     return 0;
