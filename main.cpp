@@ -434,6 +434,8 @@ private:
 
         // step 6
         // duck the sick / sosipisos /
+        // предполагается, что полигональная кривая имеет ребра направленные неявно (первая т., вторая т.)
+        // против часовой стрелки для ворона
 
     }
 
@@ -447,7 +449,9 @@ private:
             // коллинеарные сайты, по условию такого быть не должно по идее, пока хэндла не придумал
             throw;
         }
-        else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) && left_inter.y > right_inter.y)) {
+        else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) &&
+                ((line::IsZero(left_inter.y  - right_inter.y) && left_inter.x > right_inter.x) ||
+                        (!line::IsZero(left_inter.y - right_inter.y) && left_inter.y > right_inter.y)) )) {
             zig_zag.first = left->opposite->site;
             return left_inter;
         }
