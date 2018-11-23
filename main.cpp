@@ -411,8 +411,10 @@ private:
         // добавляем верхний луч в цепь
         chain.emplace_back(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true);
 
+        bool not_ray = true;
         // step 4
         while(zig_zag != lower) {
+            not_ray = false;
             bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
             border.emplace_back(zig_zag);
@@ -425,13 +427,18 @@ private:
             upper_point = down_point;
         }
         // step 5
-        bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]);
+        if(not_ray) {
+            chain[0].fst_endless = true;
+        }
+        else {
+            bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]);
 
-        border.emplace_back(zig_zag);
-        // no ChainStep here, because upper_point is just what we need now
-        // луч снизу
-        chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10), upper_point, true, false);
-
+            border.emplace_back(zig_zag);
+            // no ChainStep here, because upper_point is just what we need now
+            // луч снизу
+            chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10),
+                               upper_point, true, false);
+        }
         // step 6
         // duck the sick / sosipisos /
         // предполагается, что полигональная кривая имеет ребра направленные неявно (первая т., вторая т.)
