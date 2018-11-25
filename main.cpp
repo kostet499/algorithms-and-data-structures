@@ -463,7 +463,7 @@ private:
         auto zig_zag = upper;
         std::vector<line> chain;
         std::vector<std::pair<size_t, size_t> > border;
-        std::vector<std::pair<point, edge*> > intersected;
+        std::vector<std::pair<point, edge*> > cross;
         // step 3
         // луч сверху
         line bisector = line(point_set[upper.first], point_set[upper.second]).BisectorLine();
@@ -478,7 +478,7 @@ private:
         }
         // добавляем верхний луч в цепь
         chain.emplace_back(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true);
-        intersected.emplace_back(diech);
+        cross.emplace_back(diech);
         // step 4
         while(zig_zag != lower) {
             bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
@@ -491,7 +491,7 @@ private:
             // базовый конструктор от его точек даст отрезок
             line temp = bisector.Split(down_point, upper_point);
             chain.emplace_back(temp.first, temp.second);
-            intersected.emplace_back(diech);
+            cross.emplace_back(diech);
             upper_point = down_point;
         }
         // step 5
@@ -502,81 +502,86 @@ private:
         // луч снизу
         chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10),
                 upper_point, true, false);
-        intersected.emplace_back(upper_point, intersected.back().second->opposite);
+        cross.emplace_back(upper_point, cross.back().second->opposite);
         // step 6
         // duck the sick / sosipisos /
         // предполагается, что полигональная кривая имеет ребра направленные неявно (первая т., вторая т.)
         // против часовой стрелки для ворона
         std::vector<edge*> left_edges(chain.size());
-
-
-        // по условию точка пересечения по идее сможет лечь только по середине
-        // иначе получается, что найдутся четыре точки на одной окружности
-        edge *upper_edge = IntersectUp(border[left_top].first, chain[left_top]);
-        point left_point = upper_edge->direction.LeftPoint();
-
-        point right_point = line::Intersect(upper_edge->direction, chain[left_top]);
-        upper_edge->direction = line(left_point, right_point);
-        edge *iter = upper_edge->next;
-        while(true) {
-            if(iter->direction.HasInfinitPoint()) {
-                delete iter;
+        size_t left_top;
+        for(left_top = 1; left_top < border.size(); ++left_top) {
+            if(border[left_top].first != border[left_top - 1].first){
                 break;
             }
-            else {
-                edge *kek = iter->next;
-                delete iter;
-                iter = kek;
-            }
         }
-        iter = upper_edge;
-        int indexator = static_cast<int>(left_top);
-        while(indexator > -1) {
-            iter->next = new edge(line(chain[indexator]), border[indexator].first);
+        --left_top;
 
-            left_edges[indexator] = iter->next;
-            iter = iter->next;
-            --indexator;
-        }
-
-        ++left_top;
-        size_t left_bot = left_top;
-        upper_edge = upper_edge->opposite;
-        // идем по циклу пока мы не зашли в область на границе
-        while(border[left_top].first != border.back().first) {
-            for(size_t i = left_top + 1; i < border.size(); ++i) {
-                if(border[i].first != border[i - 1].first) {
-                    break;
-                }
-                ++left_bot;
-            }
-
-            edge *down_edge = Intersect(border[left_top].first, chain[left_top]);
-            point left_point = upper_edge->direction.LeftPoint();
-
-            point right_point = line::Intersect(upper_edge->direction, chain[left_top]);
-            upper_edge->direction = line(left_point, right_point);
-            edge *iter = upper_edge->next;
-            while(true) {
-                if(iter->direction.HasInfinitPoint()) {
+        cross[left_top].second->direction = line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first);
+        edge *iter = cross[left_top].second->next;
+        edge *nexty = iter;
+        if(!iter->direction.HasInfinitPoint()) {
+            while (true) {
+                if (iter->direction.HasInfinitPoint()) {
+                    nexty = iter->next;
                     delete iter;
                     break;
                 }
-                else {
-                    edge *kek = iter->next;
-                    delete iter;
-                    iter = kek;
-                }
-            }
-            iter = upper_edge;
-            int indexator = static_cast<int>(left_top);
-            while(indexator > -1) {
-                iter->next = new edge(line(chain[indexator]), border[indexator].first);
-
-                left_edges[indexator] = iter->next;
+                edge *kek = iter;
                 iter = iter->next;
-                --indexator;
+                delete kek;
             }
+        }
+        left_edges[0] = new edge(chain[0], border[0].first);
+        left_edges[0]->next = nexty;
+        for(size_t i = 1; i < left_top + 1; ++i) {
+            left_edges[i] = new edge(chain[i], border[i].first);
+            left_edges[i]->next = left_edges[i - 1];
+        }
+        cross[left_top].second->next = left_edges[left_top];
+        ++left_top;
+        while(border[left_top].first != border.back().first) {
+            size_t left_bot;
+            for(left_bot = left_top + 1; left_bot < border.size(); ++left_bot) {
+                if(border[left_bot].first != border[left_top].first) {
+                    break;
+                }
+            }
+            --left_bot;
+
+            cross[left_top].second->direction = line(cross[left_top].second->direction.RightPoint(), cross[left_top].first);
+            cross[left_bot].second->direction = line(cross[left_bot].second->direction.LeftPoint(), cross[left_bot].first);
+            if(cross[left_bot].second->next != cross[left_top].second) {
+                throw;
+            }
+            left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
+            left_edges[left_top]->next = cross[left_top].second;
+            for(size_t i = left_top + 1; i < left_bot + 1; ++i) {
+                left_edges[i] = new edge(chain[i], border[i].first);
+                left_edges[i]->next = left_edges[i - 1];
+            }
+            cross[left_bot].second->next = left_edges[left_bot];
+
+            left_top = left_bot + 1;
+        }
+
+        cross[left_top].second->direction = line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first);
+        iter = cross[left_top].second->next;
+        // нужно найти правый бесконечный луч и с него удалить херню до разделенного ребра
+
+        left_edges[0] = new edge(chain[0], border[0].first);
+        left_edges[0]->next = nexty;
+        for(size_t i = 1; i < left_top + 1; ++i) {
+            left_edges[i] = new edge(chain[i], border[i].first);
+            left_edges[i]->next = left_edges[i - 1];
+        }
+        cross[left_top].second->next = left_edges[left_top];
+    }
+
+    void DeleteEdgesBetween(edge* fst, edge *scd) {
+        while(fst->next != scd) {
+            edge *nexty = fst->next->next;
+            delete fst->next;
+            fst->next = nexty;
         }
     }
 
