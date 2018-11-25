@@ -293,7 +293,7 @@ public:
         hull.resize(curr - 1);
     }
 
-    const size_t &operator[](size_t index) {
+    const size_t &operator[](size_t index) const {
         return hull[index];
     }
 
@@ -303,7 +303,7 @@ public:
 
     // clock
     size_t prev(size_t index) const {
-        return index == 0 ? size() : index - 1;
+        return index == 0 ? size() - 1 : index - 1;
     }
 
     // counterclock
@@ -319,16 +319,16 @@ public:
             change = false;
             size_t lnext = voron.prev(left);
             size_t rnext = eagle.next(right);
-            if(!point::IsCounter(point_set[left], point_set[right], point_set[lnext])) {
+            if(!point::IsCounter(point_set[voron[left]], point_set[eagle[right]], point_set[voron[lnext]])) {
                 change = true;
                 left = lnext;
             }
-            if(!point::IsCounter(point_set[left], point_set[right], point_set[rnext])) {
+            if(!point::IsCounter(point_set[voron[left]], point_set[eagle[right]], point_set[eagle[rnext]])) {
                 change = true;
                 right = rnext;
             }
         }
-        return {left, right};
+        return {voron[left], eagle[right]};
     }
 
     static std::pair<size_t, size_t> UpperCommonSupport(const ConvexAndrew &voron, const ConvexAndrew &eagle, const std::vector<point> &point_set) {
@@ -339,22 +339,22 @@ public:
             change = false;
             size_t lnext = voron.next(left);
             size_t rnext = eagle.prev(right);
-            if(point::IsCounter(point_set[left], point_set[right], point_set[lnext])) {
+            if(point::IsCounter(point_set[voron[left]], point_set[eagle[right]], point_set[voron[lnext]])) {
                 change = true;
                 left = lnext;
             }
-            if(point::IsCounter(point_set[left], point_set[right], point_set[rnext])) {
+            if(point::IsCounter(point_set[voron[left]], point_set[eagle[right]], point_set[eagle[rnext]])) {
                 change = true;
                 right = rnext;
             }
         }
-        return {left, right};
+        return {voron[left], eagle[right]};
     }
 
     size_t XMin(const std::vector<point> &point_set) const {
         size_t index = 0;
         for(size_t i = 1; i < hull.size(); ++i) {
-            if(point_set[hull[i]].x < point_set[hull[index]].x) {
+            if(hull[i] < hull[index]) {
                 index = i;
             }
         }
@@ -364,7 +364,7 @@ public:
     size_t XMax(const std::vector<point> &point_set) const {
         size_t index = 0;
         for(size_t i = 1; i < hull.size(); ++i) {
-            if(point_set[hull[i]].x > point_set[hull[index]].x) {
+            if(hull[i] > hull[index]) {
                 index = i;
             }
         }
@@ -385,6 +385,11 @@ public:
     // магия
     explicit edge(const line &linenin, size_t web) : direction(linenin), site(web) {
         next = this;
+    }
+
+    void ChangeDirection(const line &new_direction) {
+        direction = new_direction;
+        next->direction = direction;
     }
 };
 
@@ -516,7 +521,7 @@ private:
         }
         --left_top;
 
-        cross[left_top].second->direction = line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first);
+        cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
         edge *iter = cross[left_top].second->next;
         edge *nexty = iter;
         if(!iter->direction.HasInfinitPoint()) {
@@ -539,6 +544,7 @@ private:
         }
         cross[left_top].second->next = left_edges[left_top];
         ++left_top;
+        // inside
         while(border[left_top].first != border.back().first) {
             size_t left_bot;
             for(left_bot = left_top + 1; left_bot < border.size(); ++left_bot) {
@@ -548,8 +554,8 @@ private:
             }
             --left_bot;
 
-            cross[left_top].second->direction = line(cross[left_top].second->direction.RightPoint(), cross[left_top].first);
-            cross[left_bot].second->direction = line(cross[left_bot].second->direction.LeftPoint(), cross[left_bot].first);
+            cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.RightPoint(), cross[left_top].first));
+            cross[left_bot].second->ChangeDirection(line(cross[left_bot].second->direction.LeftPoint(), cross[left_bot].first));
             if(cross[left_bot].second->next != cross[left_top].second) {
                 throw;
             }
@@ -563,18 +569,9 @@ private:
 
             left_top = left_bot + 1;
         }
+        // outside
+        cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
 
-        cross[left_top].second->direction = line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first);
-        iter = cross[left_top].second->next;
-        // нужно найти правый бесконечный луч и с него удалить херню до разделенного ребра
-
-        left_edges[0] = new edge(chain[0], border[0].first);
-        left_edges[0]->next = nexty;
-        for(size_t i = 1; i < left_top + 1; ++i) {
-            left_edges[i] = new edge(chain[i], border[i].first);
-            left_edges[i]->next = left_edges[i - 1];
-        }
-        cross[left_top].second->next = left_edges[left_top];
     }
 
     void DeleteEdgesBetween(edge* fst, edge *scd) {
@@ -662,14 +659,8 @@ private:
     void Build2(size_t first, size_t second) {
         line temp = line(point_set[first], point_set[second]);
         line bisector = temp.BisectorLine();
-        if(point::IsCounter(temp.first, temp.second, bisector.second)) {
-            entry_edge[first] = new edge(bisector, first);
-            entry_edge[second] = new edge(bisector.Sym(), second);
-        }
-        else {
-            entry_edge[first] = new edge(bisector.Sym(), first);
-            entry_edge[second] = new edge(bisector, second);
-        }
+        entry_edge[first] = new edge(bisector, first);
+        entry_edge[second] = new edge(bisector, second);
         MakeOpposite(entry_edge[first], entry_edge[second]);
     }
 
