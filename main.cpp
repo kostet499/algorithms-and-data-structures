@@ -30,6 +30,9 @@ struct point {
     bool operator<(const point &b) const {
         return (!IsZero(this->x - b.x) && this->x < b.x) || (IsZero(this->x - b.x) && this->y < b.y);
     }
+    bool operator==(const point &b) const {
+        return IsZero((*this - b).norm());
+    }
     static bool IsZero(double value) {
         return fabs(value) < comparing_precision;
     }
@@ -72,8 +75,8 @@ struct line {
         return
         this->fst_endless == b.fst_endless &&
         this->scd_endless == b.scd_endless &&
-                ((IsZero((b.first - this->first).norm()) && IsZero((b.second - this->second).norm())) ||
-                (IsZero((b.first - this->second).norm()) && IsZero((b.second - this->first).norm())));
+                (b.first == first && b.second == second) ||
+                (b.first == second && b.second == first);
     }
 
     point LeftPoint() const {
@@ -474,7 +477,7 @@ private:
         line bisector = line(point_set[upper.first], point_set[upper.second]).BisectorLine();
 
         border.emplace_back(zig_zag);
-        auto diech = ChainStep(bisector, zig_zag, true);
+        auto diech = ChainStep(bisector, zig_zag, true, point());
         point upper_point = diech.first;
         if(std::isnan(upper_point.y)) {
             // коллинеарный случай - значит мы можем просто запустить Build2
@@ -489,13 +492,10 @@ private:
             bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
             border.emplace_back(zig_zag);
-            auto diech = ChainStep(bisector, zig_zag, false);
+            auto diech = ChainStep(bisector, zig_zag, false, upper_point);
             point down_point = diech.first;
 
-            // temp на самом деле луч из-за специфики Split, так что пушнуть его напрямую нельзя
-            // базовый конструктор от его точек даст отрезок
-            line temp = bisector.Split(down_point, upper_point);
-            chain.emplace_back(temp.first, temp.second);
+            chain.emplace_back(down_point, upper_point);
             cross.emplace_back(diech);
             upper_point = down_point;
         }
@@ -510,7 +510,7 @@ private:
         cross.emplace_back(upper_point, cross.back().second->opposite);
         // step 6
         // duck the sick / sosipisos /
-        // предполагается, что полигональная кривая имеет ребра направленные неявно (первая т., вторая т.)
+        // предполагается, что полигональная кривая
         // против часовой стрелки для ворона
         std::vector<edge*> left_edges(chain.size());
         size_t left_top;
@@ -582,7 +582,7 @@ private:
         }
     }
 
-    std::pair <point, edge*> ChainStep(const line &bisector, std::pair<size_t, size_t> &zig_zag, bool up) const {
+    std::pair <point, edge*> ChainStep(const line &bisector, std::pair<size_t, size_t> &zig_zag, bool up, const point &last) const {
         edge *left;
         edge *right;
         if(up) {
@@ -595,7 +595,14 @@ private:
         }
         point left_inter = left == nullptr ? point() : line::Intersect(left->direction, bisector);
         point right_inter = right == nullptr ? point() : line::Intersect(right->direction, bisector);
-
+        if(left_inter == last) {
+            zig_zag.second = right->opposite->site;
+            return {right_inter, right};
+        }
+        else if(right_inter == last) {
+            zig_zag.first = left->opposite->site;
+            return {left_inter, left};
+        }
         if(std::isnan(left_inter.y) && std::isnan(right_inter.y)) {
             // коллинеарные сайты, по условию такого быть не должно по идее, пока хэндла не придумал
             return {};
