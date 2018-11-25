@@ -500,7 +500,7 @@ private:
             upper_point = down_point;
         }
         // step 5
-        bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]);
+        bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
         border.emplace_back(zig_zag);
         // no ChainStep here, because upper_point is just what we need now
