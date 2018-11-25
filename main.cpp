@@ -28,7 +28,10 @@ struct point {
         return {this->x * number, this->y * number};
     }
     bool operator<(const point &b) const {
-        return (this->x < b.x) || (this->x == b.x && this->y < b.y);
+        return (!IsZero(this->x - b.x) && this->x < b.x) || (IsZero(this->x - b.x) && this->y < b.y);
+    }
+    static bool IsZero(double value) {
+        return fabs(value) < comparing_precision;
     }
     double norm() const {
         return std::pow(this->x, 2) + std::pow(this->y, 2);
@@ -43,7 +46,10 @@ struct point {
     }
     static double Angle(const point &a, const point &b);
     static bool IsCounter(const point &a, const point &b, const point &c);
+    static double comparing_precision;
 };
+
+double point::comparing_precision = 1e-10;
 
 double point::Angle(const point &a, const point &b) {
     double one = a.x * b.x + a.y * b.y;
@@ -68,6 +74,34 @@ struct line {
         this->scd_endless == b.scd_endless &&
                 ((IsZero((b.first - this->first).norm()) && IsZero((b.second - this->second).norm())) ||
                 (IsZero((b.first - this->second).norm()) && IsZero((b.second - this->first).norm())));
+    }
+
+    point LeftPoint() const {
+        point leffest_point;
+        if(scd_endless) {
+            leffest_point = first;
+        }
+        else if(fst_endless) {
+            leffest_point = second;
+        }
+        else {
+            leffest_point = first < second ? first : second;
+        }
+        return leffest_point;
+    }
+
+    point RightPoint() const {
+        point rightest_point;
+        if(scd_endless) {
+            rightest_point = first;
+        }
+        else if(fst_endless) {
+            rightest_point = second;
+        }
+        else {
+            rightest_point = second < first ? first : second;
+        }
+        return rightest_point;
     }
 
     double norm() const {
@@ -429,12 +463,14 @@ private:
         auto zig_zag = upper;
         std::vector<line> chain;
         std::vector<std::pair<size_t, size_t> > border;
+        std::vector<std::pair<point, edge*> > intersected;
         // step 3
         // луч сверху
         line bisector = line(point_set[upper.first], point_set[upper.second]).BisectorLine();
 
         border.emplace_back(zig_zag);
-        point upper_point = ChainStep(bisector, zig_zag);
+        auto diech = ChainStep(bisector, zig_zag, true);
+        point upper_point = diech.first;
         if(std::isnan(upper_point.y)) {
             // коллинеарный случай - значит мы можем просто запустить Build2
             Build2(zig_zag.first, zig_zag.second);
@@ -442,19 +478,20 @@ private:
         }
         // добавляем верхний луч в цепь
         chain.emplace_back(upper_point, point((upper_point.y + 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y + 10), false, true);
-
-
+        intersected.emplace_back(diech);
         // step 4
         while(zig_zag != lower) {
             bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
             border.emplace_back(zig_zag);
-            point down_point = ChainStep(bisector, zig_zag);
+            auto diech = ChainStep(bisector, zig_zag, false);
+            point down_point = diech.first;
 
             // temp на самом деле луч из-за специфики Split, так что пушнуть его напрямую нельзя
             // базовый конструктор от его точек даст отрезок
             line temp = bisector.Split(down_point, upper_point);
             chain.emplace_back(temp.first, temp.second);
+            intersected.emplace_back(diech);
             upper_point = down_point;
         }
         // step 5
@@ -465,16 +502,95 @@ private:
         // луч снизу
         chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10),
                 upper_point, true, false);
+        intersected.emplace_back(upper_point, intersected.back().second->opposite);
         // step 6
         // duck the sick / sosipisos /
         // предполагается, что полигональная кривая имеет ребра направленные неявно (первая т., вторая т.)
         // против часовой стрелки для ворона
+        std::vector<edge*> left_edges(chain.size());
 
+
+        // по условию точка пересечения по идее сможет лечь только по середине
+        // иначе получается, что найдутся четыре точки на одной окружности
+        edge *upper_edge = IntersectUp(border[left_top].first, chain[left_top]);
+        point left_point = upper_edge->direction.LeftPoint();
+
+        point right_point = line::Intersect(upper_edge->direction, chain[left_top]);
+        upper_edge->direction = line(left_point, right_point);
+        edge *iter = upper_edge->next;
+        while(true) {
+            if(iter->direction.HasInfinitPoint()) {
+                delete iter;
+                break;
+            }
+            else {
+                edge *kek = iter->next;
+                delete iter;
+                iter = kek;
+            }
+        }
+        iter = upper_edge;
+        int indexator = static_cast<int>(left_top);
+        while(indexator > -1) {
+            iter->next = new edge(line(chain[indexator]), border[indexator].first);
+
+            left_edges[indexator] = iter->next;
+            iter = iter->next;
+            --indexator;
+        }
+
+        ++left_top;
+        size_t left_bot = left_top;
+        upper_edge = upper_edge->opposite;
+        // идем по циклу пока мы не зашли в область на границе
+        while(border[left_top].first != border.back().first) {
+            for(size_t i = left_top + 1; i < border.size(); ++i) {
+                if(border[i].first != border[i - 1].first) {
+                    break;
+                }
+                ++left_bot;
+            }
+
+            edge *down_edge = Intersect(border[left_top].first, chain[left_top]);
+            point left_point = upper_edge->direction.LeftPoint();
+
+            point right_point = line::Intersect(upper_edge->direction, chain[left_top]);
+            upper_edge->direction = line(left_point, right_point);
+            edge *iter = upper_edge->next;
+            while(true) {
+                if(iter->direction.HasInfinitPoint()) {
+                    delete iter;
+                    break;
+                }
+                else {
+                    edge *kek = iter->next;
+                    delete iter;
+                    iter = kek;
+                }
+            }
+            iter = upper_edge;
+            int indexator = static_cast<int>(left_top);
+            while(indexator > -1) {
+                iter->next = new edge(line(chain[indexator]), border[indexator].first);
+
+                left_edges[indexator] = iter->next;
+                iter = iter->next;
+                --indexator;
+            }
+        }
     }
 
-    point ChainStep(const line &bisector, std::pair<size_t, size_t> &zig_zag) const {
-        edge *left = Intersect(zig_zag.first, bisector);
-        edge *right = Intersect(zig_zag.second, bisector);
+    std::pair <point, edge*> ChainStep(const line &bisector, std::pair<size_t, size_t> &zig_zag, bool up) const {
+        edge *left;
+        edge *right;
+        if(up) {
+            left = IntersectUp(zig_zag.first, bisector);
+            right = IntersectUp(zig_zag.second, bisector);
+        }
+        else {
+            left = IntersectDown(zig_zag.first, bisector);
+            right = IntersectDown(zig_zag.second, bisector);
+        }
         point left_inter = left == nullptr ? point() : line::Intersect(left->direction, bisector);
         point right_inter = right == nullptr ? point() : line::Intersect(right->direction, bisector);
 
@@ -486,16 +602,16 @@ private:
                 ((line::IsZero(left_inter.y  - right_inter.y) && left_inter.x > right_inter.x) ||
                         (!line::IsZero(left_inter.y - right_inter.y) && left_inter.y > right_inter.y)) )) {
             zig_zag.first = left->opposite->site;
-            return left_inter;
+            return {left_inter, left};
         }
         else {
             zig_zag.second = right->opposite->site;
-            return right_inter;
+            return {right_inter, right};
         }
     }
 
     // returns the first one edge from the above (top y-coord) to be intersected by line parameter
-    edge *Intersect(size_t site, const line &inter) const {
+    edge *IntersectUp(size_t site, const line &inter) const {
         double y = -1000000;
         edge *top_edge = nullptr;
         edge *entry = entry_edge[site];
@@ -504,6 +620,22 @@ private:
             point inter_dot = line::Intersect(iter->direction, inter);
             if(!std::isnan(inter_dot.y) && inter_dot.y > y &&
                 iter->direction.IsOnLine(inter_dot) && inter.IsOnLine(inter_dot)) {
+                top_edge = iter;
+            }
+            iter = iter->next;
+        } while (iter != entry);
+        return top_edge;
+    }
+
+    edge *IntersectDown(size_t site, const line &inter) const {
+        double y = 1000000;
+        edge *top_edge = nullptr;
+        edge *entry = entry_edge[site];
+        edge *iter = entry;
+        do {
+            point inter_dot = line::Intersect(iter->direction, inter);
+            if(!std::isnan(inter_dot.y) && inter_dot.y < y &&
+               iter->direction.IsOnLine(inter_dot) && inter.IsOnLine(inter_dot)) {
                 top_edge = iter;
             }
             iter = iter->next;
@@ -570,18 +702,18 @@ private:
         // теперь нужно правильно вставить два луча в каждый полигон - против часовой стрелки
         // так как точки отсорчены по x, вообще говоря есть два случая: вторая точка над прямой первой-третьей или нет
         if(point::IsCounter(point_set[begin], point_set[begin + 2], point_set[begin + 1])) {
-            InsertEdges(begin, ray3.Sym(), ray1);
-            InsertEdges(begin + 1, ray1.Sym(), ray2);
-            InsertEdges(begin + 2, ray2.Sym(), ray3);
+            InsertEdges(begin, ray3, ray1);
+            InsertEdges(begin + 1, ray1, ray2);
+            InsertEdges(begin + 2, ray2, ray3);
 
             MakeOpposite(entry_edge[begin], entry_edge[begin + 2]->next);
             MakeOpposite(entry_edge[begin]->next, entry_edge[begin + 1]);
             MakeOpposite(entry_edge[begin + 2], entry_edge[begin + 1]->next);
         }
         else {
-            InsertEdges(begin, ray1.Sym(), ray3);
-            InsertEdges(begin + 1, ray2.Sym(), ray1);
-            InsertEdges(begin + 2, ray3.Sym(), ray2);
+            InsertEdges(begin, ray1, ray3);
+            InsertEdges(begin + 1, ray2, ray1);
+            InsertEdges(begin + 2, ray3, ray2);
 
             MakeOpposite(entry_edge[begin], entry_edge[begin + 1]->next);
             MakeOpposite(entry_edge[begin]->next, entry_edge[begin + 2]);
