@@ -45,6 +45,10 @@ public:
     friend std::ostream&operator<<(std::ostream &os, const BigInteger &other);
 
     friend std::istream&operator>>(std::istream &is, BigInteger &other);
+
+    operator int() const;
+
+    operator bool() const;
 private:
     void sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) const;
 
@@ -271,5 +275,14 @@ std::ostream&operator<<(std::ostream &os, const BigInteger &other) {
 
 std::istream&operator>>(std::istream &is, const BigInteger &other) {
 
+}
+
+BigInteger::operator int() const {
+    return static_cast<int>(digit[0]);
+}
+
+BigInteger::operator bool() const {
+    BigInteger zero(0);
+    return *this != zero;
 }
 #endif
