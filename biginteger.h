@@ -49,6 +49,16 @@ public:
     operator int() const;
 
     operator bool() const;
+
+    BigInteger operator*(const BigInteger &other) const;
+
+    BigInteger operator*(val_t number) const;
+
+    BigInteger operator<<(size_t num) const;
+
+    BigInteger operator>>(size_t num) const;
+
+    bool IsZero() const;
 private:
     void sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) const;
 
@@ -62,8 +72,8 @@ private:
     bool sign;
 };
 
-short BigInteger::power = 10;
-val_t BigInteger::modder = 1e10;
+short BigInteger::power = 9;
+val_t BigInteger::modder = 1e9;
 
 void BigInteger::sum(const std::vector<val_t> &a,
                                                 const std::vector<val_t> &b, std::vector<val_t> &res) const {
@@ -77,8 +87,8 @@ void BigInteger::sum(const std::vector<val_t> &a,
         if(i < b.size()) {
             current_digit += b[i];
         }
-        lefting = current_digit / modder;
         res[i] = current_digit % modder;
+        lefting = current_digit / modder;
     }
     if(lefting > 0) {
         res.emplace_back(lefting);
@@ -139,9 +149,12 @@ void swap(BigInteger &a, BigInteger &b) {
     swap(a.sign, b.sign);
 }
 
-BigInteger::BigInteger(const int other) {
-    sign = other > 0;
-    digit.emplace_back(other);
+BigInteger::BigInteger(int myint) {
+    sign = myint >= 0;
+    while(myint > 0) {
+        digit.emplace_back(myint % modder);
+        myint /= modder;
+    }
 }
 
 bool BigInteger::operator==(const BigInteger &other) const {
@@ -249,7 +262,7 @@ std::string BigInteger::toString() const {
     if(!sign) {
         res += '-';
     }
-    if(digit.size() == 1 && digit[0] == 0) {
+    if(IsZero()) {
         return "0";
     }
 
@@ -284,5 +297,69 @@ BigInteger::operator int() const {
 BigInteger::operator bool() const {
     BigInteger zero(0);
     return *this != zero;
+}
+
+BigInteger BigInteger::operator*(const BigInteger &other) const {
+    BigInteger biggy(0);
+
+    for(size_t i = 0; i < digit.size(); ++i) {
+        biggy = biggy + (other * digit[i]) << i;
+    }
+
+    biggy.sign = !(sign ^ other.sign) || biggy.IsZero();
+    return biggy;
+}
+
+BigInteger BigInteger::operator*(const val_t number) const {
+    BigInteger biggy(0);
+    val_t leftings = 0;
+    biggy.digit.resize(digit.size());
+    for(size_t i = 0; i < digit.size(); ++i) {
+        val_t value = (digit[i] + leftings) * number;
+        biggy.digit[i] = value % modder;
+        leftings = value / modder;
+    }
+    if(leftings > 0) {
+        biggy.digit.emplace_back(leftings);
+    }
+    biggy.sign = sign;
+    return biggy;
+}
+
+BigInteger BigInteger::operator<<(size_t num) const {
+    BigInteger biggy(0);
+    if(IsZero()) {
+        return biggy;
+    }
+
+    biggy.sign = sign;
+    biggy.digit.resize(num + digit.size());
+    for(size_t i = 0; i < num; ++i) {
+        biggy.digit[i] = 0;
+    }
+
+    for(size_t i = 0; i < digit.size(); ++i) {
+        biggy.digit[num + i] = digit[i];
+    }
+    return biggy;
+}
+
+BigInteger BigInteger::operator>>(size_t num) const {
+    BigInteger biggy(0);
+    if(digit.size() <= num) {
+        return biggy;
+    }
+
+    biggy.sign = sign;
+    biggy.digit.resize(digit.size() - num);
+    for(size_t i = 0; i < biggy.digit.size(); ++i) {
+        biggy.digit[i] = digit[i + num];
+    }
+
+    return biggy;
+}
+
+bool BigInteger::IsZero() const {
+    return digit.size() == 1 && digit[0] == 0;
 }
 #endif
