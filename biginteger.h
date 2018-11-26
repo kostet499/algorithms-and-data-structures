@@ -50,7 +50,7 @@ private:
 
     void dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) const;
 
-    std::string ValToString(val_t value) const;
+    std::string valToString(val_t value) const;
 private:
     static short power;
     static val_t modder;
@@ -103,12 +103,9 @@ void BigInteger::dif(const std::vector<val_t> &a, const std::vector<val_t> &b, s
     res.resize(last_not_zero + 1);
 }
 
-std::string BigInteger::ValToString(val_t value) const {
+std::string BigInteger::valToString(val_t value) const {
     std::string res;
-    if(value == 0) {
-        return "0";
-    }
-    while(value > 0) {
+    for(size_t i = 0; i < power; ++i){
         res += static_cast<char>(value % 10 + static_cast<int>('0'));
         value /= 10;
     }
@@ -248,8 +245,21 @@ std::string BigInteger::toString() const {
     if(!sign) {
         res += '-';
     }
-    for(auto i = static_cast<int>(digit.size() - 1); i > -1; --i) {
-        res += ValToString(digit[i]);
+    if(digit.size() == 1 && digit[0] == 0) {
+        return "0";
+    }
+
+    std::string temp = valToString(digit.back());
+    size_t zero = 0;
+    while(temp[zero] == '0' && zero < temp.size()) {
+        ++zero;
+    }
+    for(size_t i = zero; i < temp.size(); ++i) {
+        res += temp[i];
+    }
+
+    for(auto i = static_cast<int>(digit.size()) - 2; i > -1; --i) {
+        res += valToString(digit[i]);
     }
     return res;
 }
@@ -257,5 +267,9 @@ std::string BigInteger::toString() const {
 std::ostream&operator<<(std::ostream &os, const BigInteger &other) {
     os << other.toString();
     return os;
+}
+
+std::istream&operator>>(std::istream &is, const BigInteger &other) {
+
 }
 #endif
