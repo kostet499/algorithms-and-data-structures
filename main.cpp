@@ -75,8 +75,8 @@ struct line {
         return
         this->fst_endless == b.fst_endless &&
         this->scd_endless == b.scd_endless &&
-                (b.first == first && b.second == second) ||
-                (b.first == second && b.second == first);
+                ((b.first == first && b.second == second) ||
+                (b.first == second && b.second == first));
     }
 
     point LeftPoint() const {
@@ -264,6 +264,13 @@ struct line {
         double intercept = middle.y - middle.x * tilt;
         return {point(0, intercept), point(10, 10 * tilt + intercept), true, true};
     }
+
+    bool IsLeftRay(const line &other) const {
+        point infinit = other.fst_endless ? other.first : other.second;
+        point fst = fst_endless ? first : second;
+        point scd = scd_endless ? first : second;
+        return point::IsCounter(scd, fst, infinit);
+    }
 };
 
 // мотивирован ими - реализовать самому не сложно по описанию
@@ -414,10 +421,7 @@ public:
             do {
                 ++limited_edges;
                 ++polygons[iter->site];
-                // тут очищаю память, хз, должно работать
-                edge *kek = iter;
                 iter = iter->next;
-                delete kek;
             } while(iter != entry);
         }
         for(int i = 0; i < andrew.size(); ++i) {
@@ -492,7 +496,7 @@ private:
             bisector = line(point_set[zig_zag.first], point_set[zig_zag.second]).BisectorLine();
 
             border.emplace_back(zig_zag);
-            auto diech = ChainStep(bisector, zig_zag, false, upper_point);
+            diech = ChainStep(bisector, zig_zag, false, upper_point);
             point down_point = diech.first;
 
             chain.emplace_back(down_point, upper_point);
@@ -521,23 +525,10 @@ private:
         }
         --left_top;
 
-        cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
-        edge *iter = cross[left_top].second->next;
-        edge *nexty = iter;
-        if(!iter->direction.HasInfinitPoint()) {
-            while (true) {
-                if (iter->direction.HasInfinitPoint()) {
-                    nexty = iter->next;
-                    delete iter;
-                    break;
-                }
-                edge *kek = iter;
-                iter = iter->next;
-                delete kek;
-            }
-        }
         left_edges[0] = new edge(chain[0], border[0].first);
-        left_edges[0]->next = nexty;
+        left_edges.front()->next = GiveRay(border[0].first, true);
+        entry_edge[border[left_top].first] = cross[left_top].second;
+        cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
         for(size_t i = 1; i < left_top + 1; ++i) {
             left_edges[i] = new edge(chain[i], border[i].first);
             left_edges[i]->next = left_edges[i - 1];
@@ -553,8 +544,8 @@ private:
                 }
             }
             --left_bot;
-
-            cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.RightPoint(), cross[left_top].first));
+            entry_edge[border[left_top].first] = cross[left_top].second;
+            cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
             cross[left_bot].second->ChangeDirection(line(cross[left_bot].second->direction.LeftPoint(), cross[left_bot].first));
             if(cross[left_bot].second->next != cross[left_top].second) {
                 throw;
@@ -570,16 +561,102 @@ private:
             left_top = left_bot + 1;
         }
         // outside
+        entry_edge[border[left_top].first] = cross[left_top].second;
         cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
+        left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
+        left_edges[left_top]->next = cross[left_top].second;
+        for(size_t i = left_top + 1; i < cross.size(); ++i) {
+            left_edges[i] = new edge(chain[i], border[i].first);
+            left_edges[i]->next = left_edges[i - 1];
+        }
+        edge *right = GiveRay(border[left_top].first, false);
+        right->next = left_edges.back();
 
+        // now eagle refresh
+        std::vector<edge*> right_edges(chain.size());
+        size_t right_top;
+        for(right_top = 1; right_top < border.size(); ++right_top) {
+            if(border[right_top].second != border[right_top - 1].second){
+                break;
+            }
+        }
+        --right_top;
+
+        right_edges[0] = new edge(chain[0], border[0].second);
+        right = GiveRay(border[right_top].second, false);
+        right->next = right_edges.front();
+        entry_edge[border[right_top].second] = cross[right_top].second;
+        cross[right_top].second->ChangeDirection(line(cross[right_top].second->direction.RightPoint(), cross[right_top].first));
+        for(size_t i = 1; i < right_top + 1; ++i) {
+            right_edges[i] = new edge(chain[i], border[i].second);
+            right_edges[i - 1]->next = right_edges[i];
+        }
+        right_edges[right_top]->next = cross[right_top].second;
+
+        ++right_top;
+        // inside
+        while(border[right_top].second != border.back().second) {
+            size_t right_bot;
+            for(right_bot = right_top + 1; right_bot < border.size(); ++right_bot) {
+                if(border[right_bot].second != border[right_top].second) {
+                    break;
+                }
+            }
+            --right_bot;
+            entry_edge[border[right_top].second] = cross[right_top].second;
+            cross[right_top].second->ChangeDirection(line(cross[right_top].second->direction.LeftPoint(), cross[right_top].first));
+            cross[right_bot].second->ChangeDirection(line(cross[right_bot].second->direction.LeftPoint(), cross[right_bot].first));
+            if(cross[right_top].second->next != cross[right_bot].second) {
+                throw;
+            }
+            right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
+            cross[right_top].second->next = right_edges[right_top];
+            for(size_t i = right_top + 1; i < right_bot + 1; ++i) {
+                right_edges[i] = new edge(chain[i], border[i].second);
+                right_edges[i - 1]->next = right_edges[i];
+            }
+            right_edges[right_bot]->next = cross[right_bot].second;
+
+            right_top = right_bot + 1;
+        }
+        // outside
+        entry_edge[border[right_top].second] = cross[right_top].second;
+        cross[right_top].second->ChangeDirection(line(cross[right_top].second->direction.RightPoint(), cross[right_top].first));
+        right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
+        cross[right_top].second->next = right_edges[right_top];
+        for(size_t i = right_top + 1; i < cross.size(); ++i) {
+            right_edges[i] = new edge(chain[i], border[i].second);
+            right_edges[i - 1]->next = right_edges[i];
+        }
+        right_edges.back() = GiveRay(border[right_top].second, true);
+
+        // link voron and eagle new edges
+        for(size_t i = 0; i < left_edges.size(); ++i) {
+            MakeOpposite(left_edges[i], right_edges[i]);
+        }
     }
 
-    void DeleteEdgesBetween(edge* fst, edge *scd) {
-        while(fst->next != scd) {
-            edge *nexty = fst->next->next;
-            delete fst->next;
-            fst->next = nexty;
-        }
+    // left = false - выдаст правый луч неогр. сайта, иначе левый
+    edge *GiveRay(size_t site, bool left) const {
+        edge *found_ray = nullptr;
+        edge *iter = entry_edge[site];
+        do {
+            if(iter->direction.HasInfinitPoint()) {
+                if(found_ray == nullptr) {
+                    found_ray = iter;
+                }
+                else {
+                    if(iter->direction.IsLeftRay(found_ray->direction) == left) {
+                        return found_ray;
+                    }
+                    else {
+                        return iter;
+                    }
+                }
+            }
+            iter = iter->next;
+        } while(iter != entry_edge[site]);
+        return found_ray;
     }
 
     std::pair <point, edge*> ChainStep(const line &bisector, std::pair<size_t, size_t> &zig_zag, bool up, const point &last) const {
