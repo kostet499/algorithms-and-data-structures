@@ -544,27 +544,30 @@ private:
                 }
             }
             --left_bot;
-            entry_edge[border[left_top].first] = cross[left_top].second;
-            cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
-            cross[left_bot].second->ChangeDirection(line(cross[left_bot].second->direction.LeftPoint(), cross[left_bot].first));
-            if(cross[left_bot].second->next != cross[left_top].second) {
+            edge *top_inter = cross[left_top - 1].second->opposite;
+            edge *bot_inter = cross[left_bot].second;
+            entry_edge[border[left_top].first] = top_inter;
+            top_inter->ChangeDirection(line(top_inter->direction.LeftPoint(), cross[left_top - 1].first));
+            bot_inter->ChangeDirection(line(bot_inter->direction.LeftPoint(), cross[left_bot].first));
+            if(bot_inter->next != top_inter) {
                 throw;
             }
             left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
-            left_edges[left_top]->next = cross[left_top].second;
+            left_edges[left_top]->next = top_inter;
             for(size_t i = left_top + 1; i < left_bot + 1; ++i) {
                 left_edges[i] = new edge(chain[i], border[i].first);
                 left_edges[i]->next = left_edges[i - 1];
             }
-            cross[left_bot].second->next = left_edges[left_bot];
+            bot_inter->next = left_edges[left_bot];
 
             left_top = left_bot + 1;
         }
         // outside
-        entry_edge[border[left_top].first] = cross[left_top].second;
-        cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
+        edge *out_inter = cross[left_top - 1].second->opposite;
+        entry_edge[border[left_top].first] = out_inter;
+        out_inter->ChangeDirection(line(out_inter->direction.LeftPoint(), cross[left_top - 1].first));
         left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
-        left_edges[left_top]->next = cross[left_top].second;
+        left_edges[left_top]->next = out_inter;
         for(size_t i = left_top + 1; i < cross.size(); ++i) {
             left_edges[i] = new edge(chain[i], border[i].first);
             left_edges[i]->next = left_edges[i - 1];
@@ -603,25 +606,28 @@ private:
                 }
             }
             --right_bot;
-            entry_edge[border[right_top].second] = cross[right_top].second;
-            cross[right_top].second->ChangeDirection(line(cross[right_top].second->direction.LeftPoint(), cross[right_top].first));
-            cross[right_bot].second->ChangeDirection(line(cross[right_bot].second->direction.LeftPoint(), cross[right_bot].first));
+            edge *top_inter = cross[right_top - 1].second->opposite;
+            edge *bot_inter = cross[right_top].second;
+            entry_edge[border[right_top].second] = top_inter;
+            top_inter->ChangeDirection(line(top_inter->direction.RightPoint(), cross[right_top - 1].first));
+            bot_inter->ChangeDirection(line(bot_inter->direction.RightPoint(), cross[right_bot].first));
             if(cross[right_top].second->next != cross[right_bot].second) {
                 throw;
             }
             right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
-            cross[right_top].second->next = right_edges[right_top];
+            top_inter->next = right_edges[right_top];
             for(size_t i = right_top + 1; i < right_bot + 1; ++i) {
                 right_edges[i] = new edge(chain[i], border[i].second);
                 right_edges[i - 1]->next = right_edges[i];
             }
-            right_edges[right_bot]->next = cross[right_bot].second;
+            right_edges[right_bot]->next = bot_inter;
 
             right_top = right_bot + 1;
         }
         // outside
-        entry_edge[border[right_top].second] = cross[right_top].second;
-        cross[right_top].second->ChangeDirection(line(cross[right_top].second->direction.RightPoint(), cross[right_top].first));
+        out_inter = cross[right_top - 1].second->opposite;
+        entry_edge[border[right_top].second] = out_inter;
+        out_inter->ChangeDirection(line(out_inter->direction.RightPoint(), cross[right_top - 1].first));
         right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
         cross[right_top].second->next = right_edges[right_top];
         for(size_t i = right_top + 1; i < cross.size(); ++i) {
