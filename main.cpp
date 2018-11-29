@@ -382,6 +382,15 @@ public:
         direction = a;
         opposite->direction = a;
     }
+
+    void Next(edge *new_next) {
+        if(next == new_next) {
+            throw;
+        }
+        else {
+            next = new_next;
+        }
+    }
 };
 
 class VoronoiDiargam {
@@ -507,16 +516,16 @@ private:
         --left_top;
 
         left_edges[0] = new edge(chain[0], border[0].first);
-        left_edges.front()->next = GiveRay(border[0].first, true);
+        left_edges.front()->Next(GiveRay(border[0].first, true));
         entry_edge[border[left_top].first] = cross[left_top].second;
         cross[left_top].second->Change(
                 line(cross[left_top].second->direction.first, cross[left_top].first,
                         cross[left_top].second->direction.fst_endless, false));
         for(size_t i = 1; i < left_top + 1; ++i) {
             left_edges[i] = new edge(chain[i], border[i].first);
-            left_edges[i]->next = left_edges[i - 1];
+            left_edges[i]->Next(left_edges[i - 1]);
         }
-        cross[left_top].second->next = left_edges[left_top];
+        cross[left_top].second->Next(left_edges[left_top]);
         ++left_top;
         // inside
         while(border[left_top].first != border.back().first) {
@@ -535,12 +544,12 @@ private:
                 throw;
             }
             left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
-            left_edges[left_top]->next = top_inter;
+            left_edges[left_top]->Next(top_inter);
             for(size_t i = left_top + 1; i < left_bot + 1; ++i) {
                 left_edges[i] = new edge(chain[i], border[i].first);
-                left_edges[i]->next = left_edges[i - 1];
+                left_edges[i]->Next(left_edges[i - 1]);
             }
-            bot_inter->next = left_edges[left_bot];
+            bot_inter->Next(left_edges[left_bot]);
 
             left_top = left_bot + 1;
         }
@@ -548,13 +557,13 @@ private:
         edge *out_inter = cross[left_top - 1].second->opposite;
         entry_edge[border[left_top].first] = out_inter;
         left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
-        left_edges[left_top]->next = out_inter;
+        left_edges[left_top]->Next(out_inter);
         for(size_t i = left_top + 1; i < cross.size(); ++i) {
             left_edges[i] = new edge(chain[i], border[i].first);
-            left_edges[i]->next = left_edges[i - 1];
+            left_edges[i]->Next(left_edges[i - 1]);
         }
         edge *right = GiveRay(border[left_top].first, false);
-        right->next = left_edges.back();
+        right->Next(left_edges.back());
 
         // now eagle refresh
         std::vector<edge*> right_edges(chain.size());
@@ -568,15 +577,15 @@ private:
 
         right_edges[0] = new edge(chain[0], border[0].second);
         right = GiveRay(border[right_top].second, false);
-        right->next = right_edges.front();
+        right->Next(right_edges.front());
         entry_edge[border[right_top].second] = cross[right_top].second;
         cross[right_top].second->Change(line(cross[right_top].second->direction.second, cross[right_top].first,
                 cross[right_top].second->direction.scd_endless, false));
         for(size_t i = 1; i < right_top + 1; ++i) {
             right_edges[i] = new edge(chain[i], border[i].second);
-            right_edges[i - 1]->next = right_edges[i];
+            right_edges[i - 1]->Next(right_edges[i]);
         }
-        right_edges[right_top]->next = cross[right_top].second;
+        right_edges[right_top]->Next(cross[right_top].second);
 
         ++right_top;
         // inside
@@ -589,19 +598,19 @@ private:
             }
             --right_bot;
             edge *top_inter = cross[right_top - 1].second->opposite;
-            edge *bot_inter = cross[right_top].second;
+            edge *bot_inter = cross[right_bot].second;
             entry_edge[border[right_top].second] = top_inter;
             bot_inter->Change(line(bot_inter->direction.second, cross[right_bot].first));
             if(cross[right_top].second->next != cross[right_bot].second) {
                 throw;
             }
             right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
-            top_inter->next = right_edges[right_top];
+            top_inter->Next(right_edges[right_top]);
             for(size_t i = right_top + 1; i < right_bot + 1; ++i) {
                 right_edges[i] = new edge(chain[i], border[i].second);
-                right_edges[i - 1]->next = right_edges[i];
+                right_edges[i - 1]->Next(right_edges[i]);
             }
-            right_edges[right_bot]->next = bot_inter;
+            right_edges[right_bot]->Next(bot_inter);
 
             right_top = right_bot + 1;
         }
@@ -609,12 +618,12 @@ private:
         out_inter = cross[right_top - 1].second->opposite;
         entry_edge[border[right_top].second] = out_inter;
         right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
-        out_inter->next = right_edges[right_top];
+        out_inter->Next(right_edges[right_top]);
         for(size_t i = right_top + 1; i < cross.size(); ++i) {
             right_edges[i] = new edge(chain[i], border[i].second);
-            right_edges[i - 1]->next = right_edges[i];
+            right_edges[i - 1]->Next(right_edges[i]);
         }
-        right_edges.back()->next = GiveRay(border[right_top].second, true);
+        right_edges.back()->Next(GiveRay(border[right_top].second, true));
 
         // link voron and eagle new edges
         for(size_t i = 0; i < left_edges.size(); ++i) {
