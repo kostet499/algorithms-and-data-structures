@@ -79,32 +79,8 @@ struct line {
                 (b.first == second && b.second == first));
     }
 
-    point LeftPoint() const {
-        point leffest_point;
-        if(scd_endless) {
-            leffest_point = first;
-        }
-        else if(fst_endless) {
-            leffest_point = second;
-        }
-        else {
-            leffest_point = first < second ? first : second;
-        }
-        return leffest_point;
-    }
-
-    point RightPoint() const {
-        point rightest_point;
-        if(scd_endless) {
-            rightest_point = first;
-        }
-        else if(fst_endless) {
-            rightest_point = second;
-        }
-        else {
-            rightest_point = second < first ? first : second;
-        }
-        return rightest_point;
+    bool operator!=(const line &b) {
+        return !(*this == b);
     }
 
     double norm() const {
@@ -116,6 +92,10 @@ struct line {
     }
 
     line(const point &p1, const point &p2, bool fst, bool scd) : first(p1), second(p2), fst_endless(fst), scd_endless(scd){
+        if(p2 < p1) {
+            std::swap(first, second);
+            std::swap(fst_endless, scd_endless);
+        }
     }
 
     line(const point &p1, const point &p2) : line(p1, p2, false, false) {
@@ -208,6 +188,7 @@ struct line {
         else if(scd_endless) {
             return (dot - first).scalar(second - first) > 0;
         }
+        return false;
     }
 
     bool HasInfinitPoint() const {
@@ -397,9 +378,9 @@ public:
         next = this;
     }
 
-    void ChangeDirection(const line &new_direction) {
-        direction = new_direction;
-        next->direction = direction;
+    void Change(const line &a) {
+        direction = a;
+        opposite->direction = a;
     }
 };
 
@@ -528,7 +509,9 @@ private:
         left_edges[0] = new edge(chain[0], border[0].first);
         left_edges.front()->next = GiveRay(border[0].first, true);
         entry_edge[border[left_top].first] = cross[left_top].second;
-        cross[left_top].second->ChangeDirection(line(cross[left_top].second->direction.LeftPoint(), cross[left_top].first));
+        cross[left_top].second->Change(
+                line(cross[left_top].second->direction.first, cross[left_top].first,
+                        cross[left_top].second->direction.fst_endless, false));
         for(size_t i = 1; i < left_top + 1; ++i) {
             left_edges[i] = new edge(chain[i], border[i].first);
             left_edges[i]->next = left_edges[i - 1];
@@ -547,8 +530,7 @@ private:
             edge *top_inter = cross[left_top - 1].second->opposite;
             edge *bot_inter = cross[left_bot].second;
             entry_edge[border[left_top].first] = top_inter;
-            top_inter->ChangeDirection(line(top_inter->direction.LeftPoint(), cross[left_top - 1].first));
-            bot_inter->ChangeDirection(line(bot_inter->direction.LeftPoint(), cross[left_bot].first));
+            bot_inter->Change(line(bot_inter->direction.first, cross[left_bot].first));
             if(bot_inter->next != top_inter) {
                 throw;
             }
@@ -565,7 +547,6 @@ private:
         // outside
         edge *out_inter = cross[left_top - 1].second->opposite;
         entry_edge[border[left_top].first] = out_inter;
-        out_inter->ChangeDirection(line(out_inter->direction.LeftPoint(), cross[left_top - 1].first));
         left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
         left_edges[left_top]->next = out_inter;
         for(size_t i = left_top + 1; i < cross.size(); ++i) {
@@ -589,7 +570,8 @@ private:
         right = GiveRay(border[right_top].second, false);
         right->next = right_edges.front();
         entry_edge[border[right_top].second] = cross[right_top].second;
-        cross[right_top].second->ChangeDirection(line(cross[right_top].second->direction.RightPoint(), cross[right_top].first));
+        cross[right_top].second->Change(line(cross[right_top].second->direction.second, cross[right_top].first,
+                cross[right_top].second->direction.scd_endless, false));
         for(size_t i = 1; i < right_top + 1; ++i) {
             right_edges[i] = new edge(chain[i], border[i].second);
             right_edges[i - 1]->next = right_edges[i];
@@ -609,8 +591,7 @@ private:
             edge *top_inter = cross[right_top - 1].second->opposite;
             edge *bot_inter = cross[right_top].second;
             entry_edge[border[right_top].second] = top_inter;
-            top_inter->ChangeDirection(line(top_inter->direction.RightPoint(), cross[right_top - 1].first));
-            bot_inter->ChangeDirection(line(bot_inter->direction.RightPoint(), cross[right_bot].first));
+            bot_inter->Change(line(bot_inter->direction.second, cross[right_bot].first));
             if(cross[right_top].second->next != cross[right_bot].second) {
                 throw;
             }
@@ -627,17 +608,19 @@ private:
         // outside
         out_inter = cross[right_top - 1].second->opposite;
         entry_edge[border[right_top].second] = out_inter;
-        out_inter->ChangeDirection(line(out_inter->direction.RightPoint(), cross[right_top - 1].first));
         right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
-        cross[right_top].second->next = right_edges[right_top];
+        out_inter->next = right_edges[right_top];
         for(size_t i = right_top + 1; i < cross.size(); ++i) {
             right_edges[i] = new edge(chain[i], border[i].second);
             right_edges[i - 1]->next = right_edges[i];
         }
-        right_edges.back() = GiveRay(border[right_top].second, true);
+        right_edges.back()->next = GiveRay(border[right_top].second, true);
 
         // link voron and eagle new edges
         for(size_t i = 0; i < left_edges.size(); ++i) {
+            if(left_edges[i]->direction != right_edges[i]->direction) {
+                throw;
+            }
             MakeOpposite(left_edges[i], right_edges[i]);
         }
     }
