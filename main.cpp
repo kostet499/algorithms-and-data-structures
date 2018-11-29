@@ -273,11 +273,11 @@ public:
 
         size_t optimal_size = curr;
         // the last point will be already in the down list
-        for(int i = static_cast<int>(end) - 2;  i > -1; --i) {
+        for(int i = static_cast<int>(end) - 2;  i >= static_cast<int>(begin); --i) {
             while(curr > optimal_size && !point::IsCounter(sorted_list[hull[curr - 2]], sorted_list[hull[curr - 1]], sorted_list[i])) {
                 --curr;
             }
-            hull[curr] = static_cast<size_t >(i);
+            hull[curr] = static_cast<size_t>(i);
             ++curr;
         }
         // hull is not cycled
