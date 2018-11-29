@@ -375,7 +375,9 @@ public:
     edge *next = nullptr;
     // магия
     explicit edge(const line &linenin, size_t web) : direction(linenin), site(web) {
-        next = this;
+    }
+
+    edge() : direction(point(), point()), site(0) {
     }
 
     void Change(const line &a) {
@@ -384,7 +386,7 @@ public:
     }
 
     void Next(edge *new_next) {
-        if(next == new_next) {
+        if(next == new_next || new_next == nullptr) {
             throw;
         }
         else {
@@ -398,6 +400,7 @@ public:
     // end - excluding
     explicit VoronoiDiargam(const std::vector<point> &points, std::vector<edge*> &entry, size_t begin, size_t end)
     : point_set(points), entry_edge(entry) {
+        storage.resize(200000);
         Build(begin, end);
     }
 
@@ -515,14 +518,14 @@ private:
         }
         --left_top;
 
-        left_edges[0] = new edge(chain[0], border[0].first);
+        left_edges[0] = newEdge(chain[0], border[0].first);
         left_edges.front()->Next(GiveRay(border[0].first, true));
         entry_edge[border[left_top].first] = cross[left_top].second;
         cross[left_top].second->Change(
                 line(cross[left_top].second->direction.first, cross[left_top].first,
                         cross[left_top].second->direction.fst_endless, false));
         for(size_t i = 1; i < left_top + 1; ++i) {
-            left_edges[i] = new edge(chain[i], border[i].first);
+            left_edges[i] = newEdge(chain[i], border[i].first);
             left_edges[i]->Next(left_edges[i - 1]);
         }
         cross[left_top].second->Next(left_edges[left_top]);
@@ -543,10 +546,10 @@ private:
             if(bot_inter->next != top_inter) {
                 throw;
             }
-            left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
+            left_edges[left_top] = newEdge(chain[left_top], border[left_top].first);
             left_edges[left_top]->Next(top_inter);
             for(size_t i = left_top + 1; i < left_bot + 1; ++i) {
-                left_edges[i] = new edge(chain[i], border[i].first);
+                left_edges[i] = newEdge(chain[i], border[i].first);
                 left_edges[i]->Next(left_edges[i - 1]);
             }
             bot_inter->Next(left_edges[left_bot]);
@@ -557,10 +560,10 @@ private:
         edge *last_ray = GiveRay(border[left_top].first, false);
         edge *out_inter = cross[left_top - 1].second->opposite;
         entry_edge[border[left_top].first] = out_inter;
-        left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
+        left_edges[left_top] = newEdge(chain[left_top], border[left_top].first);
         left_edges[left_top]->Next(out_inter);
         for(size_t i = left_top + 1; i < cross.size(); ++i) {
-            left_edges[i] = new edge(chain[i], border[i].first);
+            left_edges[i] = newEdge(chain[i], border[i].first);
             left_edges[i]->Next(left_edges[i - 1]);
         }
         last_ray->Next(left_edges.back());
@@ -575,14 +578,14 @@ private:
         }
         --right_top;
 
-        right_edges[0] = new edge(chain[0], border[0].second);
+        right_edges[0] = newEdge(chain[0], border[0].second);
         last_ray = GiveRay(border[right_top].second, false);
         last_ray->Next(right_edges.front());
         entry_edge[border[right_top].second] = cross[right_top].second;
         cross[right_top].second->Change(line(cross[right_top].second->direction.second, cross[right_top].first,
                 cross[right_top].second->direction.scd_endless, false));
         for(size_t i = 1; i < right_top + 1; ++i) {
-            right_edges[i] = new edge(chain[i], border[i].second);
+            right_edges[i] = newEdge(chain[i], border[i].second);
             right_edges[i - 1]->Next(right_edges[i]);
         }
         right_edges[right_top]->Next(cross[right_top].second);
@@ -604,10 +607,10 @@ private:
             if(cross[right_top].second->next != cross[right_bot].second) {
                 throw;
             }
-            right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
+            right_edges[right_top] = newEdge(chain[right_top], border[right_top].second);
             top_inter->Next(right_edges[right_top]);
             for(size_t i = right_top + 1; i < right_bot + 1; ++i) {
-                right_edges[i] = new edge(chain[i], border[i].second);
+                right_edges[i] = newEdge(chain[i], border[i].second);
                 right_edges[i - 1]->Next(right_edges[i]);
             }
             right_edges[right_bot]->Next(bot_inter);
@@ -618,10 +621,10 @@ private:
         last_ray = GiveRay(border[right_top].second, true);
         out_inter = cross[right_top - 1].second->opposite;
         entry_edge[border[right_top].second] = out_inter;
-        right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
+        right_edges[right_top] = newEdge(chain[right_top], border[right_top].second);
         out_inter->Next(right_edges[right_top]);
         for(size_t i = right_top + 1; i < cross.size(); ++i) {
-            right_edges[i] = new edge(chain[i], border[i].second);
+            right_edges[i] = newEdge(chain[i], border[i].second);
             right_edges[i - 1]->Next(right_edges[i]);
         }
         right_edges.back()->Next(last_ray);
@@ -729,8 +732,8 @@ private:
     }
 
     void InsertEdges(size_t site, const line &a, const line &b) {
-        entry_edge[site] = new edge(a, site);
-        entry_edge[site]->next = new edge(b, site);
+        entry_edge[site] = newEdge(a, site);
+        entry_edge[site]->next = newEdge(b, site);
         entry_edge[site]->next->next = entry_edge[site];
     }
 
@@ -739,11 +742,18 @@ private:
         b->opposite = a;
     }
 
+    edge *newEdge(const line &liny, size_t site) {
+        storage[storage_index] = edge(liny, site);
+        storage[storage_index].next = &storage[storage_index];
+        ++storage_index;
+        return &storage[storage_index - 1];
+    }
+
     void Build2(size_t first, size_t second) {
         line temp = line(point_set[first], point_set[second]);
         line bisector = temp.BisectorLine();
-        entry_edge[first] = new edge(bisector, first);
-        entry_edge[second] = new edge(bisector, second);
+        entry_edge[first] = newEdge(bisector, first);
+        entry_edge[second] = newEdge(bisector, second);
         MakeOpposite(entry_edge[first], entry_edge[second]);
     }
 
@@ -809,6 +819,8 @@ private:
     // это не переменные класса, а лишь ссылка - магия да и только
     std::vector<edge*> &entry_edge;
     const std::vector<point> &point_set;
+    std::vector<edge> storage;
+    size_t storage_index = 0;
 };
 
 void prepare_data(std::vector<point> &data) {
