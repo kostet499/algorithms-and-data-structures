@@ -554,6 +554,7 @@ private:
             left_top = left_bot + 1;
         }
         // outside
+        edge *last_ray = GiveRay(border[left_top].first, false);
         edge *out_inter = cross[left_top - 1].second->opposite;
         entry_edge[border[left_top].first] = out_inter;
         left_edges[left_top] = new edge(chain[left_top], border[left_top].first);
@@ -562,8 +563,7 @@ private:
             left_edges[i] = new edge(chain[i], border[i].first);
             left_edges[i]->Next(left_edges[i - 1]);
         }
-        edge *right = GiveRay(border[left_top].first, false);
-        right->Next(left_edges.back());
+        last_ray->Next(left_edges.back());
 
         // now eagle refresh
         std::vector<edge*> right_edges(chain.size());
@@ -576,8 +576,8 @@ private:
         --right_top;
 
         right_edges[0] = new edge(chain[0], border[0].second);
-        right = GiveRay(border[right_top].second, false);
-        right->Next(right_edges.front());
+        last_ray = GiveRay(border[right_top].second, false);
+        last_ray->Next(right_edges.front());
         entry_edge[border[right_top].second] = cross[right_top].second;
         cross[right_top].second->Change(line(cross[right_top].second->direction.second, cross[right_top].first,
                 cross[right_top].second->direction.scd_endless, false));
@@ -615,6 +615,7 @@ private:
             right_top = right_bot + 1;
         }
         // outside
+        last_ray = GiveRay(border[right_top].second, true);
         out_inter = cross[right_top - 1].second->opposite;
         entry_edge[border[right_top].second] = out_inter;
         right_edges[right_top] = new edge(chain[right_top], border[right_top].second);
@@ -623,7 +624,7 @@ private:
             right_edges[i] = new edge(chain[i], border[i].second);
             right_edges[i - 1]->Next(right_edges[i]);
         }
-        right_edges.back()->Next(GiveRay(border[right_top].second, true));
+        right_edges.back()->Next(last_ray);
 
         // link voron and eagle new edges
         for(size_t i = 0; i < left_edges.size(); ++i) {
