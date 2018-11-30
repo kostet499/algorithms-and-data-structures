@@ -18,9 +18,7 @@ public:
 
     BigInteger&operator=(BigInteger other);
 
-    BigInteger&operator=(int other);
-
-    explicit BigInteger(int other);
+    BigInteger(int other);
 
     BigInteger();
 
@@ -36,11 +34,19 @@ public:
 
     bool operator>=(const BigInteger &other) const;
 
-    bool LessAbs(const BigInteger &other) const;
+    BigInteger friend operator+(const BigInteger &first, const BigInteger &other);
 
-    BigInteger operator+(const BigInteger &other) const;
+    BigInteger friend operator-(const BigInteger &first, const BigInteger &other);
 
-    BigInteger operator-(const BigInteger &other) const;
+    BigInteger& operator-=(const BigInteger &other);
+
+    BigInteger& operator+=(const BigInteger &other);
+
+    BigInteger& operator*=(const BigInteger &other);
+
+    BigInteger& operator/=(const BigInteger &other);
+
+    BigInteger& operator%=(const BigInteger &other);
 
     void operator++();
 
@@ -54,27 +60,29 @@ public:
 
     friend std::istream&operator>>(std::istream &is, BigInteger &other);
 
-    operator int() const;
+    explicit operator bool() const;
 
-    operator bool() const;
+    explicit operator int() const;
 
-    BigInteger operator*(const BigInteger &other) const;
+    BigInteger friend operator*(const BigInteger &first, const BigInteger &other);
 
-    BigInteger operator*(val_t number) const;
+    BigInteger friend operator/(const BigInteger &first, const BigInteger &other);
 
-    BigInteger operator/(const BigInteger &other) const;
-
-    BigInteger operator%(const BigInteger &other) const;
+    BigInteger friend operator%(const BigInteger &first, const BigInteger &other);
 
     BigInteger operator<<(size_t num) const;
 
     BigInteger operator>>(size_t num) const;
 
+    BigInteger operator*(val_t number) const;
+
     bool IsZero() const;
 private:
-    void sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) const;
+    static void sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res);
 
-    void dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) const;
+    static void dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res);
+
+    bool LessAbs(const BigInteger &other) const;
 
     std::string valToString(val_t value) const;
 private:
@@ -88,7 +96,7 @@ unsigned short BigInteger::power = 1;
 val_t BigInteger::modder = static_cast<val_t>(1e1);
 
 void BigInteger::sum(const std::vector<val_t> &a,
-                                                const std::vector<val_t> &b, std::vector<val_t> &res) const {
+                                                const std::vector<val_t> &b, std::vector<val_t> &res) {
     res.resize(std::max(b.size(), a.size()));
     val_t lefting = 0;
     for(size_t i = 0; i < res.size(); ++i) {
@@ -107,7 +115,7 @@ void BigInteger::sum(const std::vector<val_t> &a,
     }
 }
 
-void BigInteger::dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) const {
+void BigInteger::dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) {
     res.resize(std::max(b.size(), a.size()), 0);
     val_t lefting = 0;
     size_t last_not_zero = 0;
@@ -225,21 +233,21 @@ bool BigInteger::LessAbs(const BigInteger &other) const {
     return false;
 }
 
-BigInteger BigInteger::operator+(const BigInteger &other) const {
+BigInteger operator+(const BigInteger &first, const BigInteger &other) {
     BigInteger biggy;
-    if(sign == other.sign) {
-        biggy.sign = sign;
-        sum(digit, other.digit, biggy.digit);
+    if(first.sign == other.sign) {
+        biggy.sign = first.sign;
+        BigInteger::sum(first.digit, other.digit, biggy.digit);
         return biggy;
     }
 
-    if(this->LessAbs(other)) {
+    if(first.LessAbs(other)) {
         biggy.sign = other.sign;
-        dif(other.digit, digit, biggy.digit);
+        BigInteger::dif(other.digit, first.digit, biggy.digit);
     }
     else {
-        biggy.sign = sign;
-        dif(digit, other.digit, biggy.digit);
+        biggy.sign = first.sign;
+        BigInteger::dif(first.digit, other.digit, biggy.digit);
     }
 
     if(biggy.digit.back() == 0) {
@@ -248,21 +256,21 @@ BigInteger BigInteger::operator+(const BigInteger &other) const {
     return biggy;
 }
 
-BigInteger BigInteger::operator-(const BigInteger &other) const {
+BigInteger operator-(const BigInteger &first, const BigInteger &other) {
     BigInteger biggy;
-    if(sign ^ other.sign) {
-        biggy.sign = sign;
-        sum(digit, other.digit, biggy.digit);
+    if(first.sign ^ other.sign) {
+        biggy.sign = first.sign;
+        BigInteger::sum(first.digit, other.digit, biggy.digit);
         return biggy;
     }
 
-    if(this->LessAbs(other)) {
+    if(first.LessAbs(other)) {
         biggy.sign = !other.sign;
-        dif(other.digit, digit, biggy.digit);
+        BigInteger::dif(other.digit, first.digit, biggy.digit);
     }
     else {
-        biggy.sign = sign;
-        dif(digit, other.digit, biggy.digit);
+        biggy.sign = first.sign;
+        BigInteger::dif(first.digit, other.digit, biggy.digit);
     }
 
     if(biggy.digit.back() == 0) {
@@ -304,28 +312,19 @@ std::istream&operator>>(std::istream &is, const BigInteger &other) {
 
 }
 
-BigInteger::operator int() const {
-    int value = 0;
-    for(int i = static_cast<int>(digit.size()) - 1; i > -1; --i) {
-        value *= modder;
-        value += digit[i];
-    }
-    return static_cast<int>(value);
-}
-
 BigInteger::operator bool() const {
     BigInteger zero(0);
     return *this != zero;
 }
 
-BigInteger BigInteger::operator*(const BigInteger &other) const {
+BigInteger operator*(const BigInteger &first, const BigInteger &other) {
     BigInteger biggy;
 
-    for(size_t i = 0; i < digit.size(); ++i) {
-        biggy = biggy + ((other * digit[i]) << i);
+    for(size_t i = 0; i < first.digit.size(); ++i) {
+        biggy = biggy + ((other * first.digit[i]) << i);
     }
 
-    biggy.sign = !(sign ^ other.sign) || biggy.IsZero();
+    biggy.sign = !(first.sign ^ other.sign) || biggy.IsZero();
     return biggy;
 }
 
@@ -383,14 +382,14 @@ bool BigInteger::IsZero() const {
 }
 
 // bin search
-BigInteger BigInteger::operator/(const BigInteger &other) const {
+BigInteger operator/(const BigInteger &first, const BigInteger &other) {
     BigInteger biggy;
 
     return biggy;
 }
 
-BigInteger BigInteger::operator%(const BigInteger &other) const {
-    return *this - *this / other;
+BigInteger operator%(const BigInteger &first, const BigInteger &other) {
+    return first - first / other;
 }
 
 void BigInteger::operator++() {
@@ -411,12 +410,31 @@ BigInteger BigInteger::operator-() const {
     return biggy;
 }
 
-BigInteger& BigInteger::operator=(int other) {
-    swap(*this, BigInteger(other));
+void swap(BigInteger& a, BigInteger &&b) {
+    swap(a, b);
+}
+
+BigInteger& BigInteger::operator+=(const BigInteger &other) {
+    swap(*this, *this + other);
     return *this;
 }
 
-void swap(BigInteger& a, BigInteger &&b) {
-    swap(a, b);
+BigInteger& BigInteger::operator-=(const BigInteger &other) {
+    swap(*this, *this - other);
+    return *this;
+}
+
+BigInteger& BigInteger::operator*=(const BigInteger &other) {
+    swap(*this, *this * other);
+    return *this;
+}
+
+BigInteger& BigInteger::operator/=(const BigInteger &other) {
+    swap(*this, *this / other);
+    return *this;
+}
+
+BigInteger& BigInteger::operator%=(const BigInteger &other) {
+    swap(*this, *this % other);
 }
 #endif
