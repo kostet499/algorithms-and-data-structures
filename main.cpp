@@ -73,10 +73,10 @@ struct line {
 
     bool operator==(const line &b) const {
         return
-        this->fst_endless == b.fst_endless &&
-        this->scd_endless == b.scd_endless &&
+                this->fst_endless == b.fst_endless &&
+                this->scd_endless == b.scd_endless &&
                 ((b.first == first && b.second == second) ||
-                (b.first == second && b.second == first));
+                 (b.first == second && b.second == first));
     }
 
     bool operator!=(const line &b) {
@@ -181,7 +181,7 @@ struct line {
         if(fst_endless && scd_endless) {
             return true;
         }
-        // если это луч, то проекция должна быть положительна
+            // если это луч, то проекция должна быть положительна
         else if(fst_endless) {
             return (dot - second).scalar(first - second) > 0;
         }
@@ -399,7 +399,7 @@ class VoronoiDiargam {
 public:
     // end - excluding
     explicit VoronoiDiargam(const std::vector<point> &points, std::vector<edge*> &entry, size_t begin, size_t end)
-    : point_set(points), entry_edge(entry) {
+            : point_set(points), entry_edge(entry) {
         storage.resize(200000);
         Build(begin, end);
     }
@@ -503,7 +503,7 @@ private:
         // no ChainStep here, because upper_point is just what we need now
         // луч снизу
         chain.emplace_back(point((upper_point.y - 10 - bisector.Intercept()) / bisector.Tilt(), upper_point.y - 10),
-                upper_point, true, false);
+                           upper_point, true, false);
         cross.emplace_back(upper_point, cross.back().second->opposite);
         // step 6
         // duck the sick / sosipisos /
@@ -523,7 +523,7 @@ private:
         entry_edge[border[left_top].first] = cross[left_top].second;
         cross[left_top].second->Change(
                 line(cross[left_top].second->direction.first, cross[left_top].first,
-                        cross[left_top].second->direction.fst_endless, false));
+                     cross[left_top].second->direction.fst_endless, false));
         for(size_t i = 1; i < left_top + 1; ++i) {
             left_edges[i] = newEdge(chain[i], border[i].first);
             left_edges[i]->Next(left_edges[i - 1]);
@@ -542,7 +542,8 @@ private:
             edge *top_inter = cross[left_top - 1].second->opposite;
             edge *bot_inter = cross[left_bot].second;
             entry_edge[border[left_top].first] = top_inter;
-            bot_inter->Change(line(bot_inter->direction.first, cross[left_bot].first));
+            point not_endless = bot_inter->direction.scd_endless ? bot_inter->direction.first : bot_inter->direction.second;
+            bot_inter->Change(line(not_endless, cross[left_bot].first));
             if(bot_inter->next != top_inter) {
                 throw;
             }
@@ -583,7 +584,7 @@ private:
         last_ray->Next(right_edges.front());
         entry_edge[border[right_top].second] = cross[right_top].second;
         cross[right_top].second->Change(line(cross[right_top].second->direction.second, cross[right_top].first,
-                cross[right_top].second->direction.scd_endless, false));
+                                             cross[right_top].second->direction.scd_endless, false));
         for(size_t i = 1; i < right_top + 1; ++i) {
             right_edges[i] = newEdge(chain[i], border[i].second);
             right_edges[i - 1]->Next(right_edges[i]);
@@ -603,7 +604,8 @@ private:
             edge *top_inter = cross[right_top - 1].second->opposite;
             edge *bot_inter = cross[right_bot].second;
             entry_edge[border[right_top].second] = top_inter;
-            bot_inter->Change(line(bot_inter->direction.second, cross[right_bot].first));
+            point not_endless = bot_inter->direction.scd_endless ? bot_inter->direction.first : bot_inter->direction.second;
+            bot_inter->Change(line(not_endless, cross[right_bot].first));
             if(cross[right_top].second->next != cross[right_bot].second) {
                 throw;
             }
@@ -687,8 +689,8 @@ private:
             return {};
         }
         else if(std::isnan(right_inter.y) || (!std::isnan(left_inter.y) &&
-                ((line::IsZero(left_inter.y  - right_inter.y) && left_inter.x > right_inter.x) ||
-                        (!line::IsZero(left_inter.y - right_inter.y) && left_inter.y > right_inter.y)) )) {
+                                              ((line::IsZero(left_inter.y  - right_inter.y) && left_inter.x > right_inter.x) ||
+                                               (!line::IsZero(left_inter.y - right_inter.y) && left_inter.y > right_inter.y)) )) {
             zig_zag.first = left->opposite->site;
             return {left_inter, left};
         }
@@ -707,7 +709,7 @@ private:
         do {
             point inter_dot = line::Intersect(iter->direction, inter);
             if(!std::isnan(inter_dot.y) && inter_dot.y > y &&
-                iter->direction.IsOnLine(inter_dot) && inter.IsOnLine(inter_dot)) {
+               iter->direction.IsOnLine(inter_dot) && inter.IsOnLine(inter_dot)) {
                 top_edge = iter;
             }
             iter = iter->next;
@@ -827,7 +829,7 @@ void prepare_data(std::vector<point> &data) {
     double x;
     double y;
     size_t counter = 0;
-    while(counter < 3 && std::cin >> x) {
+    while(std::cin >> x) {
         std::cin >> y;
         data.emplace_back(x, y);
         ++counter;
