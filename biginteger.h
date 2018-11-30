@@ -77,6 +77,10 @@ public:
     BigInteger operator*(val_t number) const;
 
     bool IsZero() const;
+
+    const BigInteger operator++(int);
+
+    const BigInteger operator--(int);
 private:
     static void sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res);
 
@@ -169,11 +173,11 @@ void swap(BigInteger &a, BigInteger &b) {
     swap(a.sign, b.sign);
 }
 
-BigInteger::BigInteger(int myint) {
-    sign = myint >= 0;
-    while(myint > 0) {
-        digit.emplace_back(myint % modder);
-        myint /= modder;
+BigInteger::BigInteger(int other) {
+    sign = other >= 0;
+    while(other > 0) {
+        digit.emplace_back(other % modder);
+        other /= modder;
     }
 }
 
@@ -454,5 +458,17 @@ BigInteger& BigInteger::operator/=(const BigInteger &other) {
 
 BigInteger& BigInteger::operator%=(const BigInteger &other) {
     swap(*this, *this % other);
+}
+
+const BigInteger BigInteger::operator++(int) {
+    BigInteger biggy(*this);
+    ++*this;
+    return biggy;
+}
+
+const BigInteger BigInteger::operator--(int) {
+    BigInteger biggy(*this);
+    --*this;
+    return biggy;
 }
 #endif
