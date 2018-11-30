@@ -22,17 +22,17 @@ public:
 
     BigInteger();
 
-    bool operator==(const BigInteger &other) const;
+    bool friend operator==(const BigInteger &first, const BigInteger &other);
 
-    bool operator!=(const BigInteger &other) const;
+    bool friend operator!=(const BigInteger &first, const BigInteger &other);
 
-    bool operator<(const BigInteger &other) const;
+    bool friend operator<(const BigInteger &first, const BigInteger &other);
 
-    bool operator>(const BigInteger &other) const;
+    bool friend operator>(const BigInteger &first, const BigInteger &other);
 
-    bool operator<=(const BigInteger &other) const;
+    bool friend operator<=(const BigInteger &first, const BigInteger &other);
 
-    bool operator>=(const BigInteger &other) const;
+    bool friend operator>=(const BigInteger &first, const BigInteger &other);
 
     BigInteger friend operator+(const BigInteger &first, const BigInteger &other);
 
@@ -179,40 +179,40 @@ BigInteger::BigInteger(int myint) {
 
 BigInteger::BigInteger() : BigInteger(0){}
 
-bool BigInteger::operator==(const BigInteger &other) const {
-    bool equal = sign == other.sign && digit.size() == other.digit.size();
-    for(int i = static_cast<int>(digit.size()) - 1; equal && i > -1; --i) {
-        equal &= digit[i] == other.digit[i];
+bool operator==(const BigInteger &first, const BigInteger &other){
+    bool equal = first.sign == other.sign && first.digit.size() == other.digit.size();
+    for(int i = static_cast<int>(first.digit.size()) - 1; equal && i > -1; --i) {
+        equal &= first.digit[i] == other.digit[i];
     }
     return equal;
 }
 
-bool BigInteger::operator!=(const BigInteger &other) const {
-    return !(*this == other);
+bool operator!=(const BigInteger &first, const BigInteger &other) {
+    return !(first == other);
 }
 
-bool BigInteger::operator<(const BigInteger &other) const {
-    if(!sign && other.sign) {
+bool operator<(const BigInteger &first, const BigInteger &other) {
+    if(!first.sign && other.sign) {
         return true;
     }
 
-    if(sign && !other.sign) {
+    if(first.sign && !other.sign) {
         return false;
     }
 
-    return this->LessAbs(other);
+    return first.LessAbs(other);
 }
 
-bool BigInteger::operator>(const BigInteger &other) const {
-    return other < *this;
+bool operator>(const BigInteger &first, const BigInteger &other) {
+    return other < first;
 }
 
-bool BigInteger::operator<=(const BigInteger &other) const {
-    return !(*this > other);
+bool operator<=(const BigInteger &first, const BigInteger &other) {
+    return !(first > other);
 }
 
-bool BigInteger::operator>=(const BigInteger &other) const {
-    return other <= *this;
+bool operator>=(const BigInteger &first, const BigInteger &other) {
+    return other <= first;
 }
 
 bool BigInteger::LessAbs(const BigInteger &other) const {
@@ -308,8 +308,26 @@ std::ostream&operator<<(std::ostream &os, const BigInteger &other) {
     return os;
 }
 
-std::istream&operator>>(std::istream &is, const BigInteger &other) {
-
+std::istream&operator>>(std::istream &is, BigInteger &other) {
+    char c;
+    std::vector<val_t> revdig;
+    val_t current = 0;
+    while(is >> c) {
+        if(!(c >= '0' && c <= '9')) {
+            break;
+        }
+        int value = c - '0';
+        current = current * 10 + value;
+        if(current > BigInteger::modder) {
+            revdig.emplace_back(current % BigInteger::modder);
+            current /= BigInteger::modder;
+        }
+    }
+    other.digit.clear();
+    for(int i = static_cast<int>(revdig.size()) - 1; i > -1; --i) {
+        other.digit.emplace_back(revdig[i]);
+    }
+    other.digit.emplace_back(current);
 }
 
 BigInteger::operator bool() const {

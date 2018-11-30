@@ -1,6 +1,8 @@
 #include "biginteger.h"
 
 int main() {
-    BigInteger k(99);
+    BigInteger k;
+    std::cin >> k;
+    std::cout << k - 4;
     return 0;
 }
