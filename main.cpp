@@ -457,6 +457,8 @@ private:
     }
 
     void Merge(size_t begin, size_t end, size_t split_key) {
+        // промежуточный этап
+        LoadCSV("visualisation_data.csv");
         // step 1
         ConvexAndrew convex_voron(point_set, begin, split_key);
         ConvexAndrew convex_eagle(point_set, split_key, end);
