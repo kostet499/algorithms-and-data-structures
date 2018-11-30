@@ -89,6 +89,8 @@ private:
     bool LessAbs(const BigInteger &other) const;
 
     std::string valToString(val_t value) const;
+
+    static val_t make_digit(std::string &s, size_t begin, size_t end);
 private:
     static unsigned short power;
     static val_t modder;
@@ -96,8 +98,8 @@ private:
     bool sign;
 };
 
-unsigned short BigInteger::power = 1;
-val_t BigInteger::modder = static_cast<val_t>(1e1);
+unsigned short BigInteger::power = 3;
+val_t BigInteger::modder = static_cast<val_t>(1e3);
 
 void BigInteger::sum(const std::vector<val_t> &a,
                                                 const std::vector<val_t> &b, std::vector<val_t> &res) {
@@ -178,6 +180,9 @@ BigInteger::BigInteger(int other) {
     while(other > 0) {
         digit.emplace_back(other % modder);
         other /= modder;
+    }
+    if(other == 0) {
+        digit.emplace_back(0);
     }
 }
 
@@ -314,25 +319,32 @@ std::ostream&operator<<(std::ostream &os, const BigInteger &other) {
 
 std::istream&operator>>(std::istream &is, BigInteger &other) {
     char c;
-    std::vector<val_t> revdig;
-    val_t current = 0;
+    std::string s;
     while(is >> c) {
         if(!(c >= '0' && c <= '9')) {
             break;
         }
-        int value = c - '0';
-        current = current * 10 + value;
-        if(current > BigInteger::modder) {
-            revdig.emplace_back(current % BigInteger::modder);
-            current /= BigInteger::modder;
-        }
+        s += c;
     }
+
     other.digit.clear();
-    for(int i = static_cast<int>(revdig.size()) - 1; i > -1; --i) {
-        other.digit.emplace_back(revdig[i]);
+    for(int i = static_cast<int>(s.size()); i > 0; i -= BigInteger::power) {
+        other.digit.emplace_back(BigInteger::make_digit(s, static_cast<size_t>(std::max(0, i - BigInteger::power)),
+                                                        static_cast<size_t>(i)));
     }
-    other.digit.emplace_back(current);
+    if(other.digit.empty()) {
+        other = 0;
+    }
 }
+
+val_t BigInteger::make_digit(std::string &s, size_t begin, size_t end) {
+    val_t number = 0;
+    for(size_t i = begin; i < end; ++i) {
+        number = number * 10 + (s[i] - '0');
+    }
+    return number;
+}
+
 
 BigInteger::operator bool() const {
     BigInteger zero(0);
@@ -406,6 +418,13 @@ bool BigInteger::IsZero() const {
 // bin search
 BigInteger operator/(const BigInteger &first, const BigInteger &other) {
     BigInteger biggy;
+    std::vector<val_t> revdig;
+
+
+    biggy.digit.resize(revdig.size());
+    for(size_t i = 0; i < revdig.size(); ++i) {
+        biggy.digit[i] = revdig[revdig.size() - i - 1];
+    }
 
     return biggy;
 }

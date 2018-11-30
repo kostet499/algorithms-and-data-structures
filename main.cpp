@@ -1,7 +1,9 @@
 #include "biginteger.h"
 
 int main() {
-    BigInteger k(4), s = k--;
-    std::cout << s << " " << k;
+    BigInteger k, c;
+    std::cin >> k;
+    std::cin >> c;
+    std::cout << k * c;
     return 0;
 }
