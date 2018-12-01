@@ -91,6 +91,8 @@ private:
     std::string valToString(val_t value) const;
 
     static val_t make_digit(std::string &s, size_t begin, size_t end);
+
+    static void recursive_delete(BigInteger &temp, const BigInteger &other, std::vector<val_t> &digit);
 private:
     static unsigned short power;
     static val_t modder;
@@ -417,16 +419,43 @@ bool BigInteger::IsZero() const {
 
 // bin search
 BigInteger operator/(const BigInteger &first, const BigInteger &other) {
-    BigInteger biggy;
+    if(other.IsZero()) {
+        return {0};
+    }
+    BigInteger biggy, temp(first);
     std::vector<val_t> revdig;
 
+    BigInteger::recursive_delete(temp, other, revdig);
 
     biggy.digit.resize(revdig.size());
     for(size_t i = 0; i < revdig.size(); ++i) {
         biggy.digit[i] = revdig[revdig.size() - i - 1];
     }
 
+    biggy.sign = !(first.sign ^ other.sign);
+    if(biggy.IsZero()) {
+        biggy.sign = true;
+    }
+    if(biggy.digit.empty()) {
+        biggy = 0;
+    }
     return biggy;
+}
+
+void BigInteger::recursive_delete(BigInteger &temp, const BigInteger &other, std::vector<val_t> &digit) {
+    if(temp.digit.size() < digit.size() || temp.LessAbs(other)) {
+        digit.emplace_back(0);
+        return;
+    }
+
+    BigInteger biggy(temp << (temp.digit.size() - other.digit.size()));
+    if(biggy.LessAbs(other)) {
+        biggy.digit.emplace_back(temp[temp.digit.size() - other.digit.size() - 1]);
+    }
+
+
+
+    recursive_delete(temp, other, digit);
 }
 
 BigInteger operator%(const BigInteger &first, const BigInteger &other) {
