@@ -102,8 +102,8 @@ private:
     mutable bool sign;
 };
 
-unsigned short BigInteger::power = 4;
-val_t BigInteger::modder = static_cast<val_t>(1e4);
+unsigned short BigInteger::power = 3;
+val_t BigInteger::modder = static_cast<val_t>(1e3);
 
 void BigInteger::sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) {
     res.resize(std::max(b.size(), a.size()));
@@ -125,16 +125,18 @@ void BigInteger::sum(const std::vector<val_t> &a, const std::vector<val_t> &b, s
 }
 
 void BigInteger::delZeros() {
+    if(IsZero()) {
+        sign = true;
+        digit.resize(1);
+        digit[0] = 0;
+        return;
+    }
+
     int last_zero_index = static_cast<int>(digit.size()) - 1;
     while(digit[last_zero_index] == 0) {
         --last_zero_index;
     }
     digit.resize(static_cast<size_t>(last_zero_index) + 1);
-    if(IsZero()) {
-        sign = true;
-        digit.resize(1);
-        digit[0] = 0;
-    }
 }
 
 void BigInteger::dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) {
@@ -200,13 +202,14 @@ BigInteger::BigInteger(int other) {
         digit.emplace_back(other % modder);
         other /= modder;
     }
+    delZeros();
 }
 
 BigInteger::BigInteger() : BigInteger(0){}
 
 bool operator==(const BigInteger &first, const BigInteger &other){
     bool equal = first.sign == other.sign && first.digit.size() == other.digit.size();
-    for(int i = static_cast<int>(first.digit.size()) - 1; equal && i > -1; --i) {
+    for(int i = static_cast<int>(first.digit.size()) - 1; equal && (i > -1); --i) {
         equal &= first.digit[i] == other.digit[i];
     }
     return equal;
@@ -225,7 +228,11 @@ bool operator<(const BigInteger &first, const BigInteger &other) {
         return false;
     }
 
-    return first.lessAbs(other);
+    if(first.sign) {
+        return first.lessAbs(other);
+    }
+
+    return other.lessAbs(first);
 }
 
 bool operator>(const BigInteger &first, const BigInteger &other) {
@@ -237,7 +244,7 @@ bool operator<=(const BigInteger &first, const BigInteger &other) {
 }
 
 bool operator>=(const BigInteger &first, const BigInteger &other) {
-    return other <= first;
+    return !(other > first);
 }
 
 bool BigInteger::lessAbs(const BigInteger &other) const {
@@ -448,7 +455,7 @@ BigInteger operator/(const BigInteger &first, const BigInteger &other) {
 
 BigInteger BigInteger::recursiveDelete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit) {
     digit.clear();
-    bool result_sign = !(temp.sign ^ other.sign);
+    bool result_sign = temp.sign == other.sign;
     for(int i = static_cast<int>(temp.digit.size() - other.digit.size()); i > -1; --i) {
         val_t left = 0;
         val_t right = modder;

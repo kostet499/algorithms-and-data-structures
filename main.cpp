@@ -3,7 +3,10 @@
 int main() {
     BigInteger k, o;
     std::cin >> k >> o;
-    std::cout << k * o << std::endl;
-    std::cout << k * 2 - k % o - k / o * o - k * o / o;
+    if(k == o) {
+        std::cout << "kke" << std::endl;
+    }
+    std::cout << k * 2 - k % o - k / o * o - k * o / o << std::endl;
+    std::cout << k - o << std::endl;
     return 0;
 }
