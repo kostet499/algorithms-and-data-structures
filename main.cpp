@@ -1,9 +1,9 @@
 #include "biginteger.h"
 
 int main() {
-    int a = 1590159, b = 159;
-    BigInteger k (a);
-    k %= b;
-    std::cout << k;
+    BigInteger k, o;
+    std::cin >> k >> o;
+    std::cout << k * o - 9 * o - 16 * o << std::endl;
+    std::cout << k * 2 - k % o - k / o * o - k * o / o;
     return 0;
 }
