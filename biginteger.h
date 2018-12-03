@@ -92,7 +92,7 @@ private:
 
     static val_t make_digit(std::string &s, size_t begin, size_t end);
 
-    static void recursive_delete(BigInteger &temp, const BigInteger &other, std::vector<val_t> &digit);
+    static void recursive_delete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit);
 private:
     static unsigned short power;
     static val_t modder;
@@ -239,6 +239,9 @@ bool BigInteger::LessAbs(const BigInteger &other) const {
         if(digit[i] < other.digit[i]) {
             return true;
         }
+        else if(digit[i] > other.digit[i]) {
+            return false;
+        }
     }
 
     return false;
@@ -379,6 +382,9 @@ BigInteger BigInteger::operator*(const val_t number) const {
         biggy.digit.emplace_back(leftings);
     }
     biggy.sign = sign;
+    if(biggy.IsZero()) {
+        biggy = 0;
+    }
     return biggy;
 }
 
@@ -426,65 +432,47 @@ bool BigInteger::IsZero() const {
 
 // bin search
 BigInteger operator/(const BigInteger &first, const BigInteger &other) {
-    if(other.IsZero()) {
+    if(other.IsZero() || first.LessAbs(other)) {
         return {0};
     }
-    BigInteger biggy, temp(first);
-    std::vector<val_t> revdig;
+    BigInteger biggy;
+    BigInteger::recursive_delete(first, other, biggy.digit);
 
-    BigInteger::recursive_delete(temp, other, revdig);
-
-    biggy.digit.resize(revdig.size());
-    for(size_t i = 0; i < revdig.size(); ++i) {
-        biggy.digit[i] = revdig[revdig.size() - i - 1];
+    for(size_t i = 0; i < (biggy.digit.size() >> 1); ++i) {
+        std::swap(biggy.digit[i], biggy.digit[biggy.digit.size() - i - 1]);
     }
 
     biggy.sign = !(first.sign ^ other.sign);
-    if(biggy.IsZero()) {
-        biggy.sign = true;
-    }
     if(biggy.digit.empty()) {
         biggy = 0;
     }
     return biggy;
 }
 
-void BigInteger::recursive_delete(BigInteger &temp, const BigInteger &other, std::vector<val_t> &digit) {
-    temp.sign = true;
-    if(temp.digit.size() < digit.size() || temp.LessAbs(other)) {
-        return;
-    }
-    BigInteger biggy(temp >> (temp.digit.size() - other.digit.size()));
-    if(biggy.LessAbs(other)) {
-        swap(biggy, biggy << 1);
-        biggy.digit[0] = temp.digit[temp.digit.size() - other.digit.size() - 1];
-        if(digit.size() != 0) {
-            digit.emplace_back(0);
+void BigInteger::recursive_delete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit) {
+    digit.clear();
+    for(int i = static_cast<int>(temp.digit.size() - other.digit.size()); i > -1; --i) {
+        val_t left = 0;
+        val_t right = modder;
+        BigInteger bad(other << i);
+        temp.sign = true;
+        bad.sign = true;
+        while(left < right) {
+            val_t mid = (left + right + 1) / 2;
+            if(bad * mid > temp) {
+                right = mid - 1;
+            }
+            else {
+                left = mid;
+            }
         }
-    }
-
-    val_t left = 0;
-    val_t right = BigInteger::modder;
-    while(right - left > 0) {
-        val_t mid = (left + right + 1) >> 1;
-        if(!biggy.LessAbs(other * mid)) {
-            left = mid;
+        temp -= bad * left;
+        // first digit cannot be zero
+        if(left == 0 && digit.empty()) {
+            continue;
         }
-        else {
-            right = mid - 1;
-        }
+        digit.emplace_back(left);
     }
-    digit.emplace_back(left);
-    size_t prev = temp.digit.size();
-    temp.sign = other.sign;
-    BigInteger bad(other * left);
-    temp -= bad << (temp.digit.size() - bad.digit.size());
-    if(temp.IsZero() && prev > bad.digit.size()) {
-        for(size_t i = 0; i < prev - bad.digit.size(); ++i) {
-            digit.emplace_back(0);
-        }
-    }
-    recursive_delete(temp, other, digit);
 }
 
 BigInteger operator%(const BigInteger &first, const BigInteger &other) {
