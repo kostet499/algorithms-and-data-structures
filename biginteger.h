@@ -198,6 +198,9 @@ BigInteger::BigInteger(int other) {
     if(other == 0) {
         digit.emplace_back(0);
     }
+    if(other < 0) {
+        other = -other;
+    }
     while(other > 0) {
         digit.emplace_back(other % modder);
         other /= modder;
