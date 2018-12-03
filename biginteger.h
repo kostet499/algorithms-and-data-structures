@@ -86,13 +86,15 @@ private:
 
     static void dif(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res);
 
-    bool LessAbs(const BigInteger &other) const;
+    bool lessAbs(const BigInteger &other) const;
 
     std::string valToString(val_t value) const;
 
-    static val_t make_digit(std::string &s, size_t begin, size_t end);
+    static val_t makeDigit(std::string &s, size_t begin, size_t end);
 
-    static BigInteger recursive_delete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit);
+    static BigInteger recursiveDelete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit);
+
+    void delZeros();
 private:
     static unsigned short power;
     static val_t modder;
@@ -103,8 +105,7 @@ private:
 unsigned short BigInteger::power = 4;
 val_t BigInteger::modder = static_cast<val_t>(1e4);
 
-void BigInteger::sum(const std::vector<val_t> &a,
-                                                const std::vector<val_t> &b, std::vector<val_t> &res) {
+void BigInteger::sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res) {
     res.resize(std::max(b.size(), a.size()));
     val_t lefting = 0;
     for(size_t i = 0; i < res.size(); ++i) {
@@ -120,6 +121,19 @@ void BigInteger::sum(const std::vector<val_t> &a,
     }
     if(lefting > 0) {
         res.emplace_back(lefting);
+    }
+}
+
+void BigInteger::delZeros() {
+    int last_zero_index = static_cast<int>(digit.size()) - 1;
+    while(digit[last_zero_index] == 0) {
+        --last_zero_index;
+    }
+    digit.resize(static_cast<size_t>(last_zero_index) + 1);
+    if(IsZero()) {
+        sign = true;
+        digit.resize(1);
+        digit[0] = 0;
     }
 }
 
@@ -211,7 +225,7 @@ bool operator<(const BigInteger &first, const BigInteger &other) {
         return false;
     }
 
-    return first.LessAbs(other);
+    return first.lessAbs(other);
 }
 
 bool operator>(const BigInteger &first, const BigInteger &other) {
@@ -226,7 +240,7 @@ bool operator>=(const BigInteger &first, const BigInteger &other) {
     return other <= first;
 }
 
-bool BigInteger::LessAbs(const BigInteger &other) const {
+bool BigInteger::lessAbs(const BigInteger &other) const {
     if(digit.size() < other.digit.size()) {
         return true;
     }
@@ -255,7 +269,7 @@ BigInteger operator+(const BigInteger &first, const BigInteger &other) {
         return biggy;
     }
 
-    if(first.LessAbs(other)) {
+    if(first.lessAbs(other)) {
         biggy.sign = other.sign;
         BigInteger::dif(other.digit, first.digit, biggy.digit);
     }
@@ -264,9 +278,7 @@ BigInteger operator+(const BigInteger &first, const BigInteger &other) {
         BigInteger::dif(first.digit, other.digit, biggy.digit);
     }
 
-    if(biggy.IsZero()) {
-        biggy.sign = true;
-    }
+    biggy.delZeros();
     return biggy;
 }
 
@@ -322,17 +334,15 @@ std::istream&operator>>(std::istream &is, BigInteger &other) {
 
     other.digit.clear();
     for(int i = static_cast<int>(s.size()); i > 0; i -= BigInteger::power) {
-        other.digit.emplace_back(BigInteger::make_digit(s, static_cast<size_t>(std::max(0, i - BigInteger::power)),
+        other.digit.emplace_back(BigInteger::makeDigit(s, static_cast<size_t>(std::max(0, i - BigInteger::power)),
                                                         static_cast<size_t>(i)));
     }
-    if(other.digit.empty()) {
-        other = 0;
-    }
-
+    other.digit.emplace_back(0);
+    other.delZeros();
     return is;
 }
 
-val_t BigInteger::make_digit(std::string &s, size_t begin, size_t end) {
+val_t BigInteger::makeDigit(std::string &s, size_t begin, size_t end) {
     val_t number = 0;
     for(size_t i = begin; i < end; ++i) {
         number = number * 10 + (s[i] - '0');
@@ -353,7 +363,8 @@ BigInteger operator*(const BigInteger &first, const BigInteger &other) {
         biggy = biggy + ((other * first.digit[i]) << i);
     }
 
-    biggy.sign = !(first.sign ^ other.sign) || biggy.IsZero();
+    biggy.sign = first.sign == other.sign;
+    biggy.delZeros();
     return biggy;
 }
 
@@ -370,9 +381,7 @@ BigInteger BigInteger::operator*(const val_t number) const {
         biggy.digit.emplace_back(leftings);
     }
     biggy.sign = sign;
-    if(biggy.IsZero()) {
-        biggy = 0;
-    }
+    biggy.delZeros();
     return biggy;
 }
 
@@ -420,11 +429,11 @@ bool BigInteger::IsZero() const {
 
 // bin search
 BigInteger operator/(const BigInteger &first, const BigInteger &other) {
-    if(other.IsZero() || first.LessAbs(other)) {
+    if(other.IsZero() || first.lessAbs(other)) {
         return {0};
     }
     BigInteger biggy;
-    BigInteger::recursive_delete(first, other, biggy.digit);
+    BigInteger::recursiveDelete(first, other, biggy.digit);
 
     for(size_t i = 0; i < (biggy.digit.size() >> 1); ++i) {
         std::swap(biggy.digit[i], biggy.digit[biggy.digit.size() - i - 1]);
@@ -437,7 +446,7 @@ BigInteger operator/(const BigInteger &first, const BigInteger &other) {
     return biggy;
 }
 
-BigInteger BigInteger::recursive_delete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit) {
+BigInteger BigInteger::recursiveDelete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit) {
     digit.clear();
     bool result_sign = !(temp.sign ^ other.sign);
     for(int i = static_cast<int>(temp.digit.size() - other.digit.size()); i > -1; --i) {
@@ -468,7 +477,7 @@ BigInteger BigInteger::recursive_delete(BigInteger temp, const BigInteger &other
 
 BigInteger operator%(const BigInteger &first, const BigInteger &other) {
     std::vector<val_t> zaglushka;
-    return BigInteger::recursive_delete(first, other, zaglushka);
+    return BigInteger::recursiveDelete(first, other, zaglushka);
 }
 
 BigInteger& BigInteger::operator++() {
@@ -482,12 +491,9 @@ BigInteger& BigInteger::operator--() {
 }
 
 BigInteger BigInteger::operator-() const {
-    if(IsZero()) {
-        return *this;
-    }
-
     BigInteger biggy(*this);
     biggy.sign = !this->sign;
+    biggy.delZeros();
     return biggy;
 }
 
