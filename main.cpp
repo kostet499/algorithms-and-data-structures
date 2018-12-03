@@ -14,36 +14,62 @@ struct data {
     pos king;
     pos ferz;
     size_t step;
+    bool king_turn;
 
-    data(pos f, pos k) : king(k), ferz(f) {
-        step = 0;
+    data(pos a, pos b, size_t c, bool d) : king(a), ferz(b), step(c), king_turn(d) {
+    }
+};
+
+class Datalake {
+public:
+    Datalake() {
+        width_ = 8;
+        height_ = 8;
+        king = make_pair(2, 2);
+        for(size_t i = 0; i < width_; ++i) {
+            for(size_t j = 0; j < height_; ++j) {
+                for(size_t k = 0; k < width_; ++k) {
+                    for(size_t h = 0; h < height_; ++h) {
+                        for(size_t p = 0; p < 2; ++p) {
+                            storage.emplace_back(make_pair(i, j), make_pair(k, h), 0, static_cast<bool>(p));
+                            if(isRightData(storage.back()))
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    // компаратор для set
-    bool operator<(const data &other) const {
-        return (score() < other.score()) ||
-        (score() == other.score() && (compare_king(other) || (equal_kings(other) && (step < other.step || (step == other.step && compare_ferz(other))))));
+    size_t width() const {
+        return width_;
     }
 
-    bool compare_king(const data &other) const {
-        return (king.second < other.king.second) || (king.second == other.king.second && king.first < other.king.first);
+    size_t height() const {
+        return height_;
+    }
+private:
+    bool isRightData(const data &sit) const {
+        if(sit.king == sit.ferz || king == sit.ferz || manhattan(king, sit.king) < 2) {
+            return false;
+        }
+
+        if(!isRightPos(sit.king) || !isRightPos(sit.ferz)) {
+            return false;
+        }
     }
 
-    bool equal_kings(const data &other) const {
-        return king == other.king;
+    static int manhattan(const pos &a, const pos &b) {
+        return abs(a.first - b.first) + abs(a.second - b.second);
     }
 
-    bool compare_ferz(const data &other) const {
-        return (ferz.second < other.ferz.second) || (ferz.second == other.ferz.second && ferz.first < other.ferz.first);
+    bool isRightPos(const pos &a) const {
+        return !(a.first < 0 || a.second < 0 || a.first >= height_ || a.second >= width_);
     }
-
-
-    size_t score() const {
-        return step +
-        abs(king.first - 2) + abs(king.second - 2) +
-        abs(king.first - ferz.first) + abs(king.second - king.second) +
-        abs(king.second) + abs(king.first);
-    }
+private:
+    vector<data> storage;
+    pos king;
+    size_t width_;
+    size_t height_;
 };
 
 class Game {
@@ -62,49 +88,7 @@ public:
         RestoreField();
         dataset.insert(start);
     }
-
-    // собственно сам алгоритм A*, который вернет найденный ответ
-    // если он не пришёл к ответу, то вернёт -1
-    int AStar(size_t iterations_limit) {
-        global_answer = -1;
-        bool is_first = true;
-        size_t iterations = 0;
-        while(!dataset.empty() && iterations < iterations_limit) {
-            ++iterations;
-            data new_step_data = *dataset.begin();
-            dataset.erase(dataset.begin());
-            PrepareField(new_step_data);
-            int step_answer;
-            step_answer = MakeStep(new_step_data, is_first);
-            RestoreField();
-            if(step_answer != -1 && (step_answer < global_answer || global_answer == -1)) {
-                global_answer = step_answer;
-            }
-            is_first = false;
-        }
-        return global_answer;
-    }
 private:
-    // тут первым ходит король, следовательно в самом начале делаю первым специально ход за ферзя
-    int MakeStep(data &pst, bool is_first) {
-        if(is_first) {
-            FillDataset(pst);
-            return -1;
-        }
-        int answer = -1;
-        // если 0, то ничего не определено, 1 - пришел к победе или пат - мы проиграли, 2 - мат- победа
-        int result = KingStep(pst);
-        if(result == 2) {
-            answer = static_cast<int>(pst.step);
-        }
-        else if(result == 0) {
-            // добавление новых позиций в датасэт
-            field(pst.king) = 4;
-            FillDataset(pst);
-        }
-        return answer;
-    }
-
     void FillDataset(const data &pst) {
         vector<pos> possible_poses;
         for(int i = -1; i < 2; ++i) {
@@ -133,44 +117,6 @@ private:
             poses.emplace_back(position);
             position.first += step.first;
             position.second += step.second;
-        }
-    }
-
-    // король либо в патовой ситуации, либо в матовой, либо он пришёл к победе
-    int KingStep(data &pst) {
-        // выбираем по Score наибольшую, надеясь на то, что она оптимально-стратегическая
-        vector<data> ways;
-        data new_data = pst;
-        ++new_data.step;
-        for(int i = -1; i < 2; ++i) {
-            for(int j = -1; j < 2; ++j) {
-                if(j != 0 || i != 0) {
-                    new_data.king = make_pair(pst.king.first + i, pst.king.second + j);
-                    if(IsOnField(new_data.king) && field(new_data.king) != 1) {
-                        if(field(new_data.king) == 3 || new_data.king.second > 5) {
-                            // фактически мы же не ограничивали положение ферзя, так что он мог стать под бой - это поражение
-                            // также мы посчитали, что короля нельзя изгнать из самых высоких двух рядов
-                            return 1;
-                        }
-                        else {
-                            ways.emplace_back(new_data);
-                        }
-                    }
-                }
-            }
-        }
-        // если король не может никуда пойти и поле помечено шахом, то это мат
-        if(ways.empty() && field(pst.king) == 1) {
-            return 2;
-        }
-        else if(ways.empty()) {
-            return 1;
-        }
-        else {
-            sort(ways.begin(), ways.end());
-            pst.king = ways.back().king;
-            ++pst.step;
-            return 0;
         }
     }
 
@@ -221,24 +167,5 @@ private:
 };
 
 int main() {
-    char s;
-    int a, b, c, d;
-    cin >> s;
-    a = s - 'a';
-    cin >> b;
-    cin >> s;
-    c = s - 'a';
-    cin >> d;
-    --b;
-    --d;
-    data mydata({a, b}, {c, d});
-    Game mygame(mydata);
-    int answer = mygame.AStar(1000000);
-    if(answer == -1) {
-        cout << "IMPOSSIBLE";
-    }
-    else {
-        cout << answer;
-    }
     return 0;
 }
