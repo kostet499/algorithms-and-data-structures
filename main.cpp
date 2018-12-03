@@ -1,9 +1,9 @@
 #include "biginteger.h"
 
 int main() {
-    BigInteger k, c;
-    std::cin >> k;
-    std::cin >> c;
-    std::cout << k * c;
+    int a = 1600, b = 4;
+    BigInteger k (a);
+    k /= b;
+    std::cout << k;
     return 0;
 }
