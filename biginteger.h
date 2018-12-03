@@ -329,23 +329,19 @@ std::ostream&operator<<(std::ostream &os, const BigInteger &other) {
 }
 
 std::istream&operator>>(std::istream &is, BigInteger &other) {
-    char c;
     std::string s;
-    while(is >> c) {
-        if(!(c >= '0' && c <= '9') && c != '-') {
-            break;
-        }
-        if(c == '-') {
-            other.sign = false;
-            continue;
-        }
-        s += c;
+    is >> s;
+    other.sign = true;
+    int index = 0;
+    if(s[0] == '-') {
+        other.sign = false;
+        ++index;
     }
 
     other.digit.clear();
     for(int i = static_cast<int>(s.size()); i > 0; i -= BigInteger::power) {
-        other.digit.emplace_back(BigInteger::makeDigit(s, static_cast<size_t>(std::max(0, i - BigInteger::power)),
-                                                        static_cast<size_t>(i)));
+        other.digit.emplace_back(BigInteger::makeDigit(s, static_cast<size_t>(std::max(index, i - BigInteger::power)),
+                                                       static_cast<size_t>(i)));
     }
     other.digit.emplace_back(0);
     other.delZeros();
