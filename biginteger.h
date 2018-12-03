@@ -476,7 +476,7 @@ void BigInteger::recursive_delete(BigInteger temp, const BigInteger &other, std:
 }
 
 BigInteger operator%(const BigInteger &first, const BigInteger &other) {
-    return first - first / other;
+    return first - (first / other) * other;
 }
 
 BigInteger& BigInteger::operator++() {
