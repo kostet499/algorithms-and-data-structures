@@ -1,5 +1,5 @@
 #include <iostream>
-#include <unordered_set>
+#include <unordered_map>
 #include <set>
 #include <vector>
 #include <algorithm>
@@ -8,15 +8,23 @@
 
 using namespace std;
 
-using pos = pair<short, short>;
+using pos = pair<unsigned short, unsigned short>;
 
 struct data {
     pos king;
     pos ferz;
-    size_t step;
     bool king_turn;
 
-    data(pos a, pos b, size_t c, bool d) : king(std::move(a)), ferz(std::move(b)), step(c), king_turn(d) {
+    data(pos a, pos b, bool d) : king(std::move(a)), ferz(std::move(b)), king_turn(d) {
+    }
+
+    using val_t = unsigned long long;
+    val_t hash() const {
+        return static_cast<val_t>(king_turn) +
+                (static_cast<val_t>(king.first) << 1) +
+                (static_cast<val_t>(king.second) << 9) +
+                (static_cast<val_t>(ferz.first) << 17) +
+                (static_cast<val_t>(ferz.second) << 25);
     }
 };
 
@@ -31,9 +39,10 @@ public:
                 for(size_t k = 0; k < width_; ++k) {
                     for(size_t h = 0; h < height_; ++h) {
                         for(size_t p = 0; p < 2; ++p) {
-                            storage.emplace_back(make_pair(i, j), make_pair(k, h), 0, static_cast<bool>(p));
-                            if(!IsRightData(storage.back())) {
-                                storage.pop_back();
+                            data to_insert = data(make_pair(i, j), make_pair(k, h),static_cast<bool>(p));
+                            if(IsRightData(to_insert)) {
+                                storage[to_insert.hash()] = -1;
+                                iterated.emplace_back(to_insert);
                             }
                         }
                     }
@@ -50,8 +59,12 @@ public:
         return height_;
     }
 
-    data&operator[](int i) {
-        return storage[i];
+    short&operator[](const data &i) {
+        return storage[i.hash()];
+    }
+
+    const data&operator[](int i) {
+        return iterated[i];
     }
 
     const pos& wk() {
@@ -79,7 +92,8 @@ public:
     }
 private:
     data &representer;
-    vector<data> storage;
+    unordered_map<unsigned long long, short> storage;
+    std::vector<data> iterated;
     pos king;
     size_t width_;
     size_t height_;
@@ -142,7 +156,7 @@ private:
 };
 
 int main() {
-    data representer(make_pair(0, 0), make_pair(0, 0), 0 , 0);
+    data representer(make_pair(0, 0), make_pair(0, 0), 0);
     GameGraph mygraph(representer);
     Game mygame(mygraph);
 
