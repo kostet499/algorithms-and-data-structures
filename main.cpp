@@ -63,7 +63,7 @@ public:
             return false;
         }
 
-        return IsRightPos(sit.king) && IsRightPos(sit.ferz));
+        return IsRightPos(sit.king) && IsRightPos(sit.ferz);
     }
 
     static int Manhattan(const pos &a, const pos &b) {
