@@ -103,10 +103,11 @@ public:
 
     bool BeatenFerz(const pos &check, const data &data_) const {
         const pos &ferz = data_.ferz;
-        const pos &king = data_.king;
         int dif_fst = abs(ferz.first - check.first);
         int dif_scd = abs(ferz.second - check.second);
-        return (check != ferz) && (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) ;
+        return (check != ferz) && (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
+                                  (dif_fst != (abs(ferz.first - king.first) + abs(king.first - check.first)) ||
+                                   dif_scd != (abs(ferz.second - king.second) + abs(king.second - check.second)));
     }
 private:
     unordered_map<unsigned long long, short> storage;
