@@ -31,7 +31,7 @@ struct data {
 
 class GameGraph {
 public:
-    explicit GameGraph(data &fst) : representer(fst){
+    explicit GameGraph() {
         width_ = 8;
         height_ = 8;
         king = make_pair(2, 2);
@@ -77,7 +77,7 @@ public:
     }
 
     bool IsRightData(const data &sit) const {
-        if(sit.king == sit.ferz || king == sit.ferz || Manhattan(king, sit.king) < 2) {
+        if(sit.king == sit.ferz || king == sit.ferz || MaxMetrics(king, sit.king) < 2) {
             return false;
         }
 
@@ -88,15 +88,14 @@ public:
         return abs(a.first - b.first) + abs(a.second - b.second);
     }
 
+    static int MaxMetrics(const pos &a, const pos &b) {
+        return std::max(abs(a.first - b.first), abs(a.second - b.second));
+    }
+
     bool IsRightPos(const pos &a) const {
         return !(a.first < 0 || a.second < 0 || a.first >= width_ || a.second >= height_);
     }
-
-    data &repr() {
-        return representer;
-    }
 private:
-    data &representer;
     unordered_map<unsigned long long, short> storage;
     std::vector<data> iterated;
     pos king;
@@ -117,7 +116,7 @@ public:
                             data new_data = sit;
                             new_data.ferz = make_pair(i, j);
                             new_data.king_turn = false;
-                            if(GetState(new_data.ferz) == 1 && new_data.ferz != new_data.king) {
+                            if(BeatenFerz(new_data.ferz, sit) && new_data.ferz != new_data.king && new_data.ferz != graph.wk()) {
                                 auto value = static_cast<short>(graph[sit] + 1);
                                 if(graph[new_data] > value) {
                                     graph[new_data] = value;
@@ -137,7 +136,7 @@ public:
                             new_data.king = make_pair(sit.king.first + i, sit.king.second + j);
                             new_data.king_turn = true;
                             if(graph.IsRightPos(new_data.king)) {
-                                if(tryKing(new_data)) {
+                                if(tryKing(new_data, sit)) {
                                     temp.emplace_back(new_data);
                                 }
                             }
@@ -149,9 +148,9 @@ public:
         }
     }
 
-    int GetState(const pos &check) const {
-        const pos &ferz = graph.repr().ferz;
-        const pos &king = graph.repr().king;
+    int GetState(const pos &check, const data &data_) const {
+        const pos &ferz = data_.ferz;
+        const pos &king = data_.king;
         int dif_fst = abs(ferz.first - check.first);
         int dif_scd = abs(ferz.second - check.second);
         if(GameGraph::Manhattan(check, graph.wk()) == 1) {
@@ -163,22 +162,30 @@ public:
         if(check == ferz) {
             return 3;
         }
-        if((dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
-                !(dif_fst == abs(ferz.first - king.first) + abs(king.first - check.first) &&
-                  dif_scd == abs(ferz.second - king.second) + abs(king.second - check.second)) ) {
+        if(BeatenFerz(check, data_)) {
             return 1;
         }
         return 0;
     }
 
-    bool NoStep(const pos &check) const {
+    bool BeatenFerz(const pos &check, const data &data_) const {
+        const pos &ferz = data_.ferz;
+        const pos &king = data_.king;
+        int dif_fst = abs(ferz.first - check.first);
+        int dif_scd = abs(ferz.second - check.second);
+        return (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
+        !(dif_fst == abs(ferz.first - king.first) + abs(king.first - check.first) &&
+             dif_scd == abs(ferz.second - king.second) + abs(king.second - check.second));
+    }
+
+    bool NoStep(const pos &check, const data &data_) const {
         for(int i = -1; i < 2; ++i) {
             for(int j = -1; j < 2; ++j) {
                 if(j == 0 && i == 0) {
                     continue;
                 }
                 pos near_to_check(check.first + i, check.second + j);
-                if(graph.IsRightPos(near_to_check) && GetState(near_to_check) != 1) {
+                if(graph.IsRightPos(near_to_check) && GetState(near_to_check, data_) != 1) {
                     return false;
                 }
             }
@@ -187,11 +194,11 @@ public:
     }
 
     bool IsPat(const data &check) const {
-        return check.king_turn && GetState(check.king) == 0 && NoStep(check.king);
+        return check.king_turn && GetState(check.king, check) == 0 && NoStep(check.king, check);
     }
 
     bool IsMat(const data &check) const {
-        return check.king_turn && GetState(check.king) == 1 && NoStep(check.king);
+        return check.king_turn && GetState(check.king, check) == 1 && NoStep(check.king, check);
     }
 private:
     void initialize() {
@@ -207,9 +214,43 @@ private:
         }
     }
 
+    // проверяет возможен ли был переход королём из позиции check в sit с максимизацией ходов
+    // если встречает патовую вершину, то автоматически переходит в неё
+    // ничего не делает, когда не определены все вершины
+    bool tryKing(const data &check, const data &sit) {
+        short other_dist = 0;
+        for(int i = -1; i < 2; ++i) {
+            for(int j = -1; j < 2; ++j) {
+                if(i == 0 && j == 0) {
+                    continue;
+                }
 
-    bool tryKing(const data &check) {
+                data new_data = check;
+                new_data.king.first += i;
+                new_data.king.second += j;
+                // специфический кейс - король убил ферзя и не попал под шах, зачем ему sit
+                if(new_data.king == check.ferz && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
+                    graph[check] = -1;
+                    return false;
+                }
+                // мы же всё таки сравниваем остальные переходы с sit
+                if(!graph.IsRightData(new_data) || new_data.king == sit.king) {
+                    return false;
+                }
+                // король может из check перейти в патовую ситуацию, зачем ему sit
+                if(graph[new_data] == -1) {
+                    graph[check] = -1;
+                    return false;
+                }
 
+                other_dist = std::max(other_dist, graph[new_data]);
+            }
+        }
+        if(other_dist <= graph[sit]) {
+            graph[check] = static_cast<short>(graph[sit] + 1);
+            return true;
+        }
+        return false;
     }
 private:
     GameGraph &graph;
@@ -217,9 +258,24 @@ private:
 };
 
 int main() {
-    data representer(make_pair(0, 0), make_pair(0, 0), false);
-    GameGraph mygraph(representer);
+    GameGraph mygraph;
     Game mygame(mygraph);
-
+    char s;
+    int a, b, c, d;
+    cin >> s;
+    a = s - 'a';
+    cin >> b;
+    cin >> s;
+    c = s - 'a';
+    cin >> d;
+    --b;
+    --d;
+    data mydata(make_pair(c, d), make_pair(a, b), false);
+    if(mygraph[mydata] == -1) {
+        cout << "IMPOSSIBLE";
+    }
+    else {
+        cout << mygraph[mydata];
+    }
     return 0;
 }
