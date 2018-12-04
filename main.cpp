@@ -133,7 +133,7 @@ public:
                             if(!graph.IsRightData(new_data)) {
                                 continue;
                             }
-                            if(graph.BeatenFerz(new_data.ferz, sit) && new_data.ferz != new_data.king && new_data.ferz != graph.wk()) {
+                            if(graph.BeatenFerz(new_data.ferz, sit)) {
                                 auto value = static_cast<short>(graph[sit] + 1);
                                 if(graph[new_data] > value) {
                                     graph[new_data] = value;
