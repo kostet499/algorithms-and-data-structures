@@ -16,13 +16,13 @@ struct data {
     size_t step;
     bool king_turn;
 
-    data(pos a, pos b, size_t c, bool d) : king(a), ferz(b), step(c), king_turn(d) {
+    data(pos a, pos b, size_t c, bool d) : king(std::move(a)), ferz(std::move(b)), step(c), king_turn(d) {
     }
 };
 
-class Datalake {
+class GameGraph {
 public:
-    Datalake() {
+    GameGraph() {
         width_ = 8;
         height_ = 8;
         king = make_pair(2, 2);
@@ -32,7 +32,7 @@ public:
                     for(size_t h = 0; h < height_; ++h) {
                         for(size_t p = 0; p < 2; ++p) {
                             storage.emplace_back(make_pair(i, j), make_pair(k, h), 0, static_cast<bool>(p));
-                            if(isRightData(storage.back()))
+                            if(IsRightData(storage.back()))
                         }
                     }
                 }
@@ -47,23 +47,31 @@ public:
     size_t height() const {
         return height_;
     }
-private:
-    bool isRightData(const data &sit) const {
-        if(sit.king == sit.ferz || king == sit.ferz || manhattan(king, sit.king) < 2) {
+
+    data&operator[](int i) {
+        return storage[i];
+    }
+
+    const pos& wk() {
+        return king;
+    }
+
+    bool IsRightData(const data &sit) const {
+        if(sit.king == sit.ferz || king == sit.ferz || Manhattan(king, sit.king) < 2) {
             return false;
         }
 
-        if(!isRightPos(sit.king) || !isRightPos(sit.ferz)) {
+        if(!IsRightPos(sit.king) || !IsRightPos(sit.ferz)) {
             return false;
         }
     }
 
-    static int manhattan(const pos &a, const pos &b) {
+    static int Manhattan(const pos &a, const pos &b) {
         return abs(a.first - b.first) + abs(a.second - b.second);
     }
 
-    bool isRightPos(const pos &a) const {
-        return !(a.first < 0 || a.second < 0 || a.first >= height_ || a.second >= width_);
+    bool IsRightPos(const pos &a) const {
+        return !(a.first < 0 || a.second < 0 || a.first >= width_ || a.second >= height_);
     }
 private:
     vector<data> storage;
@@ -74,21 +82,25 @@ private:
 
 class Game {
 public:
-    explicit Game(data &start) {
-        storage.resize(8);
-        for(auto &filed : storage) {
-            filed.resize(8, 0);
+    explicit Game(GameGraph &gamegraph) : graph(gamegraph) {
+        storage.resize(graph.width());
+        for(auto &row : storage) {
+            row.resize(graph.height());
         }
 
-        field({2, 2}) = 2;
-        if(start.king.first > start.king.second) {
-            swap(start.king.first, start.king.second);
-            swap(start.ferz.first, start.ferz.second);
-        }
-        RestoreField();
-        dataset.insert(start);
+        iterateOverField(RestoreField);
     }
 private:
+    void iterateOverField(bool (*function)(size_t, size_t)) {
+        for(size_t i = 0; i < graph.width(); ++i) {
+            for(size_t j = 0; j < graph.height(); ++j) {
+                if(!function(i, j)) {
+                    return;
+                }
+            }
+        }
+    }
+
     void FillDataset(const data &pst) {
         vector<pos> possible_poses;
         for(int i = -1; i < 2; ++i) {
@@ -145,27 +157,26 @@ private:
         return !(min(cell.first, cell.second) < 0 || max(cell.first, cell.second) > 7);
     }
 
-    void RestoreField() {
-        for(auto &filed : storage) {
-            fill(filed.begin(), filed.end(), 0);
+    static bool RestoreField(size_t i, size_t j) {
+        pos curr(i, j);
+        field(curr) = 0;
+        if(GameGraph::Manhattan(curr, graph.wk()) == 1) {
+            field(curr) = 1;
         }
-        for(size_t i = 1; i < 4; ++i) {
-            for(size_t j = 1; j < 4; ++j) {
-                field({i, j}) = 1;
-            }
+        else if(GameGraph::Manhattan(curr, graph.wk()) == 0) {
+            field(curr) = 2;
         }
-        field({2, 2}) = 2;
     }
 
     short &field(const pos &position) {
         return storage[position.first][position.second];
     }
 private:
-    vector<vector <short> > storage;
-    set<data> dataset;
-    int global_answer;
+    vector<vector<short> > storage;
+    GameGraph &graph;
 };
 
 int main() {
+
     return 0;
 }
