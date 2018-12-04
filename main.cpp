@@ -106,7 +106,7 @@ public:
         const pos &king = data_.king;
         int dif_fst = abs(ferz.first - check.first);
         int dif_scd = abs(ferz.second - check.second);
-        return (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) ;
+        return (check != ferz) && (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) ;
     }
 private:
     unordered_map<unsigned long long, short> storage;
