@@ -152,7 +152,7 @@ public:
                             data new_data = sit;
                             new_data.king = make_pair(sit.king.first + i, sit.king.second + j);
                             new_data.king_turn = true;
-                            if(graph.IsRightPos(new_data.king)) {
+                            if(graph.IsRightData(new_data)) {
                                 if(tryKing(new_data, sit)) {
                                     temp.emplace_back(new_data);
                                 }
@@ -216,6 +216,7 @@ private:
                 data new_data = check;
                 new_data.king.first += i;
                 new_data.king.second += j;
+
                 // специфический кейс - король убил ферзя и не попал под шах, зачем ему sit
                 if(new_data.king == check.ferz && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
                     graph[check] = -1;
@@ -223,7 +224,7 @@ private:
                 }
                 // мы же всё таки сравниваем остальные переходы с sit
                 if(!graph.IsRightData(new_data) || new_data.king == sit.king) {
-                    return false;
+                    continue;
                 }
                 // король может из check перейти в патовую ситуацию, зачем ему sit
                 if(graph[new_data] == -1) {
@@ -231,7 +232,9 @@ private:
                     return false;
                 }
 
-                other_dist = std::max(other_dist, graph[new_data]);
+                if(!graph.BeatenFerz(new_data.king, new_data) && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
+                    other_dist = std::max(other_dist, graph[new_data]);
+                }
             }
         }
         if(other_dist <= graph[sit]) {
