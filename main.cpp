@@ -106,9 +106,7 @@ public:
         const pos &king = data_.king;
         int dif_fst = abs(ferz.first - check.first);
         int dif_scd = abs(ferz.second - check.second);
-        return (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
-               !(dif_fst == abs(ferz.first - king.first) + abs(king.first - check.first) &&
-                 dif_scd == abs(ferz.second - king.second) + abs(king.second - check.second));
+        return (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) ;
     }
 private:
     unordered_map<unsigned long long, short> storage;
@@ -166,26 +164,6 @@ public:
         }
     }
 
-    int GetState(const pos &check, const data &data_) const {
-        const pos &ferz = data_.ferz;
-        const pos &king = data_.king;
-        int dif_fst = abs(ferz.first - check.first);
-        int dif_scd = abs(ferz.second - check.second);
-        if(GameGraph::Manhattan(check, graph.wk()) == 1) {
-            return 1;
-        }
-        if(check == graph.wk()) {
-            return 2;
-        }
-        if(check == ferz) {
-            return 3;
-        }
-        if(graph.BeatenFerz(check, data_)) {
-            return 1;
-        }
-        return 0;
-    }
-
     bool NoStep(const pos &check, const data &data_) const {
         for(int i = -1; i < 2; ++i) {
             for(int j = -1; j < 2; ++j) {
@@ -193,7 +171,8 @@ public:
                     continue;
                 }
                 pos near_to_check(check.first + i, check.second + j);
-                if(graph.IsRightPos(near_to_check) && GetState(near_to_check, data_) != 1) {
+                if(graph.IsRightPos(near_to_check) && !graph.BeatenFerz(near_to_check, data_)
+                && GameGraph::MaxMetrics(near_to_check, graph.wk()) > 1) {
                     return false;
                 }
             }
@@ -202,11 +181,11 @@ public:
     }
 
     bool IsPat(const data &check) const {
-        return check.king_turn && GetState(check.king, check) == 0 && NoStep(check.king, check);
+        return check.king_turn && !graph.BeatenFerz(check.king, check) && NoStep(check.king, check);
     }
 
     bool IsMat(const data &check) const {
-        return check.king_turn && GetState(check.king, check) == 1 && NoStep(check.king, check);
+        return check.king_turn && graph.BeatenFerz(check.king, check) && NoStep(check.king, check);
     }
 private:
     void initialize() {
@@ -264,6 +243,8 @@ private:
     GameGraph &graph;
     vector<data> new_sits;
 };
+
+// 19 матовых ситуаций вроде бы должно быть
 
 int main() {
     GameGraph mygraph;
