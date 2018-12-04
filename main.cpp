@@ -77,10 +77,15 @@ public:
     }
 
     bool IsRightData(const data &sit) const {
+        // позиции фигур совпадают или короли рядом
         if(sit.king == sit.ferz || king == sit.ferz || MaxMetrics(king, sit.king) < 2) {
             return false;
         }
-
+        // если во время хода ферзя король под боем
+        if(!sit.king_turn && BeatenFerz(sit.king, sit)) {
+            return false;
+        }
+        // позиции на поле
         return IsRightPos(sit.king) && IsRightPos(sit.ferz);
     }
 
@@ -94,6 +99,16 @@ public:
 
     bool IsRightPos(const pos &a) const {
         return !(a.first < 0 || a.second < 0 || a.first >= width_ || a.second >= height_);
+    }
+
+    bool BeatenFerz(const pos &check, const data &data_) const {
+        const pos &ferz = data_.ferz;
+        const pos &king = data_.king;
+        int dif_fst = abs(ferz.first - check.first);
+        int dif_scd = abs(ferz.second - check.second);
+        return (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
+               !(dif_fst == abs(ferz.first - king.first) + abs(king.first - check.first) &&
+                 dif_scd == abs(ferz.second - king.second) + abs(king.second - check.second));
     }
 private:
     unordered_map<unsigned long long, short> storage;
@@ -116,7 +131,10 @@ public:
                             data new_data = sit;
                             new_data.ferz = make_pair(i, j);
                             new_data.king_turn = false;
-                            if(BeatenFerz(new_data.ferz, sit) && new_data.ferz != new_data.king && new_data.ferz != graph.wk()) {
+                            if(!graph.IsRightData(new_data)) {
+                                continue;
+                            }
+                            if(graph.BeatenFerz(new_data.ferz, sit) && new_data.ferz != new_data.king && new_data.ferz != graph.wk()) {
                                 auto value = static_cast<short>(graph[sit] + 1);
                                 if(graph[new_data] > value) {
                                     graph[new_data] = value;
@@ -162,20 +180,10 @@ public:
         if(check == ferz) {
             return 3;
         }
-        if(BeatenFerz(check, data_)) {
+        if(graph.BeatenFerz(check, data_)) {
             return 1;
         }
         return 0;
-    }
-
-    bool BeatenFerz(const pos &check, const data &data_) const {
-        const pos &ferz = data_.ferz;
-        const pos &king = data_.king;
-        int dif_fst = abs(ferz.first - check.first);
-        int dif_scd = abs(ferz.second - check.second);
-        return (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
-        !(dif_fst == abs(ferz.first - king.first) + abs(king.first - check.first) &&
-             dif_scd == abs(ferz.second - king.second) + abs(king.second - check.second));
     }
 
     bool NoStep(const pos &check, const data &data_) const {
