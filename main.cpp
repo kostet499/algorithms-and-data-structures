@@ -5,10 +5,11 @@
 #include <algorithm>
 #include <cstdlib>
 #include <utility>
+#include <stack>
 
 using namespace std;
 
-using pos = pair<unsigned short, unsigned short>;
+using pos = pair<short, short>;
 
 struct data {
     pos king;
@@ -71,6 +72,10 @@ public:
         return king;
     }
 
+    const size_t size() {
+        return iterated.size();
+    }
+
     bool IsRightData(const data &sit) const {
         if(sit.king == sit.ferz || king == sit.ferz || Manhattan(king, sit.king) < 2) {
             return false;
@@ -102,61 +107,62 @@ private:
 class Game {
 public:
     explicit Game(GameGraph &gamegraph) : graph(gamegraph) {
-        storage.resize(graph.width());
-        for(auto &row : storage) {
-            row.resize(graph.height());
-        }
-
-        iterateOverField(RestoreField);
+        initialize();
     }
 
-    void iterateOverField(bool (*function)(size_t, size_t, GameGraph &graph, vector<vector<short> > &storage)) {
-        for(size_t i = 0; i < graph.width(); ++i) {
-            for(size_t j = 0; j < graph.height(); ++j) {
-                if(!function(i, j, graph, storage)) {
-                    return;
-                }
-            }
-        }
-    }
-
-    static bool RestoreField(size_t i, size_t j, GameGraph &graph, vector<vector<short> > &storage) {
-        pos curr(i, j);
-        field(curr, storage) = 0;
+    int GetState(const pos &check) const {
         const pos &ferz = graph.repr().ferz;
         const pos &king = graph.repr().king;
-        int dif_fst = abs(ferz.first - curr.first);
-        int dif_scd = abs(ferz.second - curr.second);
-        if(GameGraph::Manhattan(curr, graph.wk()) == 1) {
-            field(curr, storage) = 1;
+        int dif_fst = abs(ferz.first - check.first);
+        int dif_scd = abs(ferz.second - check.second);
+        if(GameGraph::Manhattan(check, graph.wk()) == 1) {
+            return 1;
         }
-        else if(curr == graph.wk()) {
-            field(curr, storage) = 2;
+        if(check == graph.wk()) {
+            return 2;
         }
-        else if(curr == ferz) {
-            field(curr, storage) = 3;
+        if(check == ferz) {
+            return 3;
         }
-        else if((dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
-        !(dif_fst == abs(ferz.first - king.first) + abs(king.first - curr.first) &&
-        dif_scd == abs(ferz.second - king.second) + abs(king.second - curr.second)) ) {
-            field(curr, storage) = 1;
+        if((dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
+                !(dif_fst == abs(ferz.first - king.first) + abs(king.first - check.first) &&
+                  dif_scd == abs(ferz.second - king.second) + abs(king.second - check.second)) ) {
+            return 1;
+        }
+        return 0;
+    }
+
+    bool NoStep(const pos &check) const {
+        for(int i = -1; i < 2; ++i) {
+            for(int j = -1; j < 2; ++j) {
+                if(j == 0 && i == 0) {
+                    continue;
+                }
+                pos near_to_check(check.first + i, check.second + j);
+                if(graph.IsRightPos(near_to_check) && storage[near_to_check.first][near_to_check.second] != 1) {
+                    return false;
+                }
+            }
         }
         return true;
     }
 
+    bool IsPat(const data &check);
+
 private:
-    static short &field(const pos &position, vector<vector<short> > &storage) {
-        return storage[position.first][position.second];
+    void initialize() {
+        for (size_t i = 0; i < graph.size(); ++i) {
+
+        }
     }
 
-
 private:
-    vector<vector<short> > storage;
     GameGraph &graph;
+    stack<data> new_sits;
 };
 
 int main() {
-    data representer(make_pair(0, 0), make_pair(0, 0), 0);
+    data representer(make_pair(0, 0), make_pair(0, 0), false);
     GameGraph mygraph(representer);
     Game mygame(mygraph);
 
