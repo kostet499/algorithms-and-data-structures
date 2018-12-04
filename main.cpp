@@ -42,7 +42,7 @@ public:
                         for(size_t p = 0; p < 2; ++p) {
                             data to_insert = data(make_pair(i, j), make_pair(k, h),static_cast<bool>(p));
                             if(IsRightData(to_insert)) {
-                                storage[to_insert.hash()] = -1;
+                                storage[to_insert.hash()] = 128;
                                 iterated.emplace_back(to_insert);
                             }
                         }
@@ -108,6 +108,45 @@ class Game {
 public:
     explicit Game(GameGraph &gamegraph) : graph(gamegraph) {
         initialize();
+        while(!new_sits.empty()) {
+            vector<data> temp;
+            for(const auto &sit : new_sits) {
+                if(sit.king_turn) {
+                    for(size_t i = 0; i < graph.width(); ++i) {
+                        for(size_t j = 0; j < graph.height(); ++j) {
+                            data new_data = sit;
+                            new_data.ferz = make_pair(i, j);
+                            new_data.king_turn = false;
+                            if(GetState(new_data.ferz) == 1 && new_data.ferz != new_data.king) {
+                                auto value = static_cast<short>(graph[sit] + 1);
+                                if(graph[new_data] > value) {
+                                    graph[new_data] = value;
+                                    temp.emplace_back(new_data);
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    for(int i = -1; i < 2; ++i) {
+                        for(int j = -1; j < 2; ++j) {
+                            if(i == 0 && j == 0) {
+                                continue;
+                            }
+                            data new_data = sit;
+                            new_data.king = make_pair(sit.king.first + i, sit.king.second + j);
+                            new_data.king_turn = true;
+                            if(graph.IsRightPos(new_data.king)) {
+                                if(tryKing(new_data)) {
+                                    temp.emplace_back(new_data);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            new_sits = temp;
+        }
     }
 
     int GetState(const pos &check) const {
@@ -139,7 +178,7 @@ public:
                     continue;
                 }
                 pos near_to_check(check.first + i, check.second + j);
-                if(graph.IsRightPos(near_to_check) && storage[near_to_check.first][near_to_check.second] != 1) {
+                if(graph.IsRightPos(near_to_check) && GetState(near_to_check) != 1) {
                     return false;
                 }
             }
@@ -147,18 +186,34 @@ public:
         return true;
     }
 
-    bool IsPat(const data &check);
+    bool IsPat(const data &check) const {
+        return check.king_turn && GetState(check.king) == 0 && NoStep(check.king);
+    }
 
+    bool IsMat(const data &check) const {
+        return check.king_turn && GetState(check.king) == 1 && NoStep(check.king);
+    }
 private:
     void initialize() {
         for (size_t i = 0; i < graph.size(); ++i) {
-
+            if(IsPat(graph[i])) {
+                // number for impossible cases
+                graph[graph[i]] = -1;
+            }
+            else if(IsMat(graph[i])) {
+                graph[graph[i]] = 0;
+                new_sits.emplace_back(graph[i]);
+            }
         }
     }
 
+
+    bool tryKing(const data &check) {
+
+    }
 private:
     GameGraph &graph;
-    stack<data> new_sits;
+    vector<data> new_sits;
 };
 
 int main() {
