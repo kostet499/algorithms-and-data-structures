@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <queue>
+#include <set>
+#include <cmath>
 
 using namespace std;
 
@@ -73,13 +75,24 @@ public:
         return iterated.size();
     }
 
+    static double Euclidean(const pos &a, const pos &b) {
+        return sqrt(static_cast<double>(pow(a.first - b.first, 2) + pow(a.second - b.second, 2)));
+    }
+
+    static bool IsBetween(const pos &a, const pos &b, const pos &c) {
+        double ab = Euclidean(a, b);
+        double ac = Euclidean(a, c);
+        double bc = Euclidean(b, c);
+        return ac + bc - ab < 1e-8;
+    };
+
     bool IsRightData(const data &sit) const {
         // позиции фигур совпадают или короли рядом
         if(sit.king == sit.ferz || king == sit.ferz || MaxMetrics(king, sit.king) < 2) {
             return false;
         }
         // если во время хода ферзя король под боем
-        if(!sit.king_turn && BeatenFerz(sit.king, sit)) {
+        if(!sit.king_turn && (BeatenFerz(sit.king, sit) || Manhattan(sit.king, king) < 2)) {
             return false;
         }
         // позиции на поле
@@ -102,9 +115,7 @@ public:
         const pos &ferz = data_.ferz;
         int dif_fst = abs(ferz.first - check.first);
         int dif_scd = abs(ferz.second - check.second);
-        return (check != ferz) && (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) &&
-                                  (dif_fst != (abs(ferz.first - king.first) + abs(king.first - check.first)) ||
-                                   dif_scd != (abs(ferz.second - king.second) + abs(king.second - check.second)));
+        return (check != ferz) && (dif_fst == 0 || dif_scd == 0 || dif_fst == dif_scd) && !IsBetween(check, ferz, king);
     }
 
     bool IsUndefined(const data &data_) {
@@ -220,7 +231,9 @@ private:
     // если встречает патовую вершину, то автоматически переходит в неё
     // ничего не делает, когда не определены все вершины
     void tryFerz(const data &sit) {
-        graph[sit] = 0;
+        if(graph.IsUndefined(sit)) {
+            graph[sit] = 0;
+        }
         for(size_t i = 0; i < graph.width(); ++i) {
             for(size_t j = 0; j < graph.height(); ++j) {
                 data new_data = sit;
@@ -234,7 +247,12 @@ private:
                         graph.SetUndefined(sit);
                     }
                     else if(!graph.IsPat(new_data) && !graph.IsUndefined(new_data)) {
-                        graph[sit] = static_cast<short>(graph[new_data] + 1);
+                        if(graph[sit] == 0) {
+                            graph[sit] = static_cast<short>(graph[new_data] + 1);
+                        }
+                        else {
+                            graph[sit] = std::min(graph[sit], static_cast<short>(graph[new_data] + 1));
+                        }
                     }
                 }
             }
@@ -257,7 +275,8 @@ private:
                 new_data.king.first += i;
                 new_data.king.second += j;
                 if(new_data.king == new_data.ferz && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
-                    graph[sit] = -1;
+                    graph.SetPat(sit);
+                    feedFlow(sit);
                     return;
                 }
 
@@ -267,6 +286,7 @@ private:
 
                 if(graph.IsPat(new_data)) {
                     graph.SetPat(sit);
+                    feedFlow(sit);
                     return;
                 }
                 if(graph.IsUndefined(new_data)) {
@@ -278,9 +298,7 @@ private:
                 }
             }
         }
-        if(!graph.IsUndefined(sit)) {
-            feedFlow(sit);
-        }
+        feedFlow(sit);
     }
 private:
     GameGraph &graph;
