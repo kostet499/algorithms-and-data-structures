@@ -135,6 +135,9 @@ public:
                             }
                             if(graph.BeatenFerz(new_data.ferz, sit)) {
                                 auto value = static_cast<short>(graph[sit] + 1);
+                                if(value == 0) {
+                                    throw;
+                                }
                                 if(graph[new_data] > value) {
                                     graph[new_data] = value;
                                     temp.emplace_back(new_data);
@@ -216,16 +219,18 @@ private:
                 data new_data = check;
                 new_data.king.first += i;
                 new_data.king.second += j;
+                new_data.king_turn = false;
+                // мы же всё таки сравниваем остальные переходы с sit
+                if(!graph.IsRightData(new_data) || new_data.king == sit.king) {
+                    continue;
+                }
 
                 // специфический кейс - король убил ферзя и не попал под шах, зачем ему sit
                 if(new_data.king == check.ferz && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
                     graph[check] = -1;
                     return false;
                 }
-                // мы же всё таки сравниваем остальные переходы с sit
-                if(!graph.IsRightData(new_data) || new_data.king == sit.king) {
-                    continue;
-                }
+
                 // король может из check перейти в патовую ситуацию, зачем ему sit
                 if(graph[new_data] == -1) {
                     graph[check] = -1;
