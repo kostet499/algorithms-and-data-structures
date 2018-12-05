@@ -1,11 +1,8 @@
 #include <iostream>
 #include <unordered_map>
-#include <set>
 #include <vector>
 #include <algorithm>
-#include <cstdlib>
-#include <utility>
-#include <stack>
+#include <queue>
 
 using namespace std;
 
@@ -137,17 +134,14 @@ class Game {
 public:
     explicit Game(GameGraph &gamegraph) : graph(gamegraph) {
         initialize();
-        bool change = true;
-        while(change) {
-            change = false;
-            for(size_t i = 0; i < graph.size(); ++i) {
-                if(graph.IsUndefined(graph[i])) {
-                    if (graph[i].king_turn) {
-                        tryKing(graph[i]);
-                    } else {
-                        tryFerz(graph[i]);
-                    }
-                    change |= !graph.IsUndefined(graph[i]);
+        while(!workflow.empty()) {
+            data situation = workflow.front();
+            workflow.pop();
+            if (graph.IsUndefined(situation)) {
+                if (situation.king_turn) {
+                    tryKing(situation);
+                } else {
+                    tryFerz(situation);
                 }
             }
         }
@@ -182,9 +176,42 @@ private:
             if(IsPat(graph[i])) {
                 // number for impossible cases
                 graph.SetPat(graph[i]);
+                feedFlow(graph[i]);
             }
             else if(IsMat(graph[i])) {
                 graph[graph[i]] = 0;
+                feedFlow(graph[i]);
+            }
+        }
+    }
+
+    void feedFlow(const data &sit) {
+        if(sit.king_turn) {
+            for(size_t i = 0; i < graph.width(); ++i) {
+                for(size_t j = 0; j < graph.height(); ++j) {
+                    data new_data = sit;
+                    new_data.ferz = make_pair(i, j);
+                    new_data.king_turn = false;
+                    if(graph.IsRightData(new_data) && graph.BeatenFerz(new_data.ferz, sit)) {
+                        workflow.push(new_data);
+                    }
+                }
+            }
+        }
+        else {
+            for(int i = -1; i < 2; ++i) {
+                for(int j = -1; j < 2; ++j) {
+                    if(i == 0 && j == 0) {
+                        continue;
+                    }
+                    data new_data = sit;
+                    new_data.king_turn = true;
+                    new_data.king.first += i;
+                    new_data.king.second += j;
+                    if(graph.IsRightData(new_data)) {
+                        workflow.push(new_data);
+                    }
+                }
             }
         }
     }
@@ -211,6 +238,9 @@ private:
                     }
                 }
             }
+        }
+        if(!graph.IsUndefined(sit)) {
+            feedFlow(sit);
         }
     }
 
@@ -248,9 +278,13 @@ private:
                 }
             }
         }
+        if(!graph.IsUndefined(sit)) {
+            feedFlow(sit);
+        }
     }
 private:
     GameGraph &graph;
+    queue<data> workflow;
 };
 
 // 19 матовых ситуаций вроде бы должно быть
