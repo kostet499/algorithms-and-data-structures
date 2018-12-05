@@ -42,7 +42,7 @@ public:
                         for(size_t p = 0; p < 2; ++p) {
                             data to_insert = data(make_pair(i, j), make_pair(k, h),static_cast<bool>(p));
                             if(IsRightData(to_insert)) {
-                                storage[to_insert.hash()] = 128;
+                                SetUndefined(to_insert);
                                 iterated.emplace_back(to_insert);
                             }
                         }
@@ -109,6 +109,22 @@ public:
                                   (dif_fst != (abs(ferz.first - king.first) + abs(king.first - check.first)) ||
                                    dif_scd != (abs(ferz.second - king.second) + abs(king.second - check.second)));
     }
+
+    bool IsUndefined(const data &data_) {
+        return storage[data_.hash()] == 100;
+    }
+
+    void SetUndefined(const data &data_) {
+        storage[data_.hash()] = 100;
+    }
+
+    bool IsPat(const data &data_) {
+        return storage[data_.hash()] == -1;
+    }
+
+    void SetPat(const data &data_) {
+        storage[data_.hash()] = -1;
+    }
 private:
     unordered_map<unsigned long long, short> storage;
     std::vector<data> iterated;
@@ -121,50 +137,19 @@ class Game {
 public:
     explicit Game(GameGraph &gamegraph) : graph(gamegraph) {
         initialize();
-        while(!new_sits.empty()) {
-            vector<data> temp;
-            for(const auto &sit : new_sits) {
-                if(sit.king_turn) {
-                    for(size_t i = 0; i < graph.width(); ++i) {
-                        for(size_t j = 0; j < graph.height(); ++j) {
-                            data new_data = sit;
-                            new_data.ferz = make_pair(i, j);
-                            new_data.king_turn = false;
-                            if(!graph.IsRightData(new_data)) {
-                                continue;
-                            }
-                            if(graph.BeatenFerz(new_data.ferz, sit)) {
-                                auto value = static_cast<short>(graph[sit] + 1);
-                                if(value == 0) {
-                                    throw;
-                                }
-                                if(graph[new_data] > value) {
-                                    graph[new_data] = value;
-                                    temp.emplace_back(new_data);
-                                }
-                            }
-                        }
+        bool change = true;
+        while(change) {
+            change = false;
+            for(size_t i = 0; i < graph.size(); ++i) {
+                if(graph.IsUndefined(graph[i])) {
+                    if (graph[i].king_turn) {
+                        tryKing(graph[i]);
+                    } else {
+                        tryFerz(graph[i]);
                     }
-                }
-                else {
-                    for(int i = -1; i < 2; ++i) {
-                        for(int j = -1; j < 2; ++j) {
-                            if(i == 0 && j == 0) {
-                                continue;
-                            }
-                            data new_data = sit;
-                            new_data.king = make_pair(sit.king.first + i, sit.king.second + j);
-                            new_data.king_turn = true;
-                            if(graph.IsRightData(new_data)) {
-                                if(tryKing(new_data, sit)) {
-                                    temp.emplace_back(new_data);
-                                }
-                            }
-                        }
-                    }
+                    change |= !graph.IsUndefined(graph[i]);
                 }
             }
-            new_sits = temp;
         }
     }
 
@@ -196,11 +181,10 @@ private:
         for (size_t i = 0; i < graph.size(); ++i) {
             if(IsPat(graph[i])) {
                 // number for impossible cases
-                graph[graph[i]] = -1;
+                graph.SetPat(graph[i]);
             }
             else if(IsMat(graph[i])) {
                 graph[graph[i]] = 0;
-                new_sits.emplace_back(graph[i]);
             }
         }
     }
@@ -208,49 +192,65 @@ private:
     // проверяет возможен ли был переход королём из позиции check в sit с максимизацией ходов
     // если встречает патовую вершину, то автоматически переходит в неё
     // ничего не делает, когда не определены все вершины
-    bool tryKing(const data &check, const data &sit) {
-        short other_dist = 0;
+    void tryFerz(const data &sit) {
+        graph[sit] = 0;
+        for(size_t i = 0; i < graph.width(); ++i) {
+            for(size_t j = 0; j < graph.height(); ++j) {
+                data new_data = sit;
+                new_data.ferz = make_pair(i, j);
+                new_data.king_turn = true;
+                if(graph.IsRightData(new_data) && graph.BeatenFerz(new_data.ferz, sit)) {
+                    if(graph[sit] == 0 && graph.IsPat(new_data)) {
+                        graph.SetPat(sit);
+                    }
+                    else if((graph[sit] == 0 || graph.IsPat(sit)) && graph.IsUndefined(new_data)) {
+                        graph.SetUndefined(sit);
+                    }
+                    else if(!graph.IsPat(new_data) && !graph.IsUndefined(new_data)) {
+                        graph[sit] = static_cast<short>(graph[new_data] + 1);
+                    }
+                }
+            }
+        }
+    }
+
+    void tryKing(const data &sit) {
+        graph[sit] = 0;
         for(int i = -1; i < 2; ++i) {
             for(int j = -1; j < 2; ++j) {
                 if(i == 0 && j == 0) {
                     continue;
                 }
 
-                data new_data = check;
+                data new_data = sit;
+                new_data.king_turn = false;
                 new_data.king.first += i;
                 new_data.king.second += j;
-                new_data.king_turn = false;
-                // мы же всё таки сравниваем остальные переходы с sit
-                if(!graph.IsRightData(new_data) || new_data.king == sit.king) {
+                if(new_data.king == new_data.ferz && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
+                    graph[sit] = -1;
+                    return;
+                }
+
+                if(!graph.IsRightData(new_data)) {
                     continue;
                 }
 
-                // специфический кейс - король убил ферзя и не попал под шах, зачем ему sit
-                if(new_data.king == check.ferz && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
-                    graph[check] = -1;
-                    return false;
+                if(graph.IsPat(new_data)) {
+                    graph.SetPat(sit);
+                    return;
                 }
-
-                // король может из check перейти в патовую ситуацию, зачем ему sit
-                if(graph[new_data] == -1) {
-                    graph[check] = -1;
-                    return false;
+                if(graph.IsUndefined(new_data)) {
+                    graph.SetUndefined(sit);
+                    return;
                 }
-
-                if(!graph.BeatenFerz(new_data.king, new_data) && GameGraph::MaxMetrics(new_data.king, graph.wk()) > 1) {
-                    other_dist = std::max(other_dist, graph[new_data]);
+                if(graph[new_data] + 1 > graph[sit]) {
+                    graph[sit] = static_cast<short>(graph[new_data] + 1);
                 }
             }
         }
-        if(other_dist <= graph[sit]) {
-            graph[check] = static_cast<short>(graph[sit] + 1);
-            return true;
-        }
-        return false;
     }
 private:
     GameGraph &graph;
-    vector<data> new_sits;
 };
 
 // 19 матовых ситуаций вроде бы должно быть
