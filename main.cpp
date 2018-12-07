@@ -7,14 +7,8 @@ using namespace std;
 class Trie {
 
 public:
-    Trie(const vector<string> &pattern_list) {
-        terminal_index = 0;
-        last_index = 1;
-        // zero index automatically goes to root
-        indices.resize(1);
-        // the root is a parent of himself
-        parents.resize(1, 0);
-        char_edges.resize(1, 0);
+    explicit Trie(const vector<string> &pattern_list) : terminal_index(0), last_index(1), indices(0),
+        parents(0), char_edges(1) {
         for(const auto &pattern : pattern_list) {
             add_str(pattern);
         }
@@ -22,27 +16,27 @@ public:
 
     //getters
     bool is_terminal(int i) const {
-        return static_cast<bool>(indices[i].size());
+        return indices[i].empty();
     }
 
-    vector<int>& get_terminal_indices(int i) {
+    const vector<int>& get_terminal_indices(int i) const {
         return indices[i];
     }
 
-    int get_parent(int i) {
+    int get_parent(int i) const {
         return parents[i];
     }
 
     int get_edge(int i, char c) {
         int key =  encode(i, c);
-        return edges.find(key) == edges.end() ? -1 : edges[key];
+        return edges.find(key) == edges.end() ? no_edge : edges[key];
     }
 
-    char get_char_edges(int vertex) {
+    char get_char_edges(int vertex) const {
         return char_edges[vertex];
     }
 
-    size_t get_size() {
+    size_t get_size() const {
         return indices.size();
     }
 
@@ -82,17 +76,18 @@ private:
     vector<vector<int> > indices;
     int terminal_index;
     int last_index;
+public:
+    static const int no_edge = -1;
 };
 
 class Automate {
 
 public:
-    Automate(Trie &trie1) {
-        trie = &trie1;
-        suffix_values.resize(trie->get_size(), -1);
-        terminal_values.resize(trie->get_size(), -1);
-        compressor.resize(trie->get_size());
-        visited.resize(trie->get_size(), false);
+    explicit Automate(Trie &trie1) : trie(trie1) {
+        suffix_values.resize(trie.get_size(), Trie::no_edge);
+        terminal_values.resize(trie.get_size(), Trie::no_edge);
+        compressor.resize(trie.get_size());
+        visited.resize(trie.get_size(), false);
         suffix_values[0] = 0;
     }
 
@@ -103,21 +98,21 @@ public:
 
 private:
     int suffix_link(int vertex) {
-        if(suffix_values[vertex] != -1) {
+        if(suffix_values[vertex] != Trie::no_edge) {
             return suffix_values[vertex];
         }
-        int parent = trie->get_parent(vertex);
+        int parent = trie.get_parent(vertex);
         if(!parent) {
             return suffix_values[vertex] = 0;
         }
-        return suffix_values[vertex] = transit(suffix_link(parent), trie->get_char_edges(vertex));
+        return suffix_values[vertex] = transit(suffix_link(parent), trie.get_char_edges(vertex));
     }
 
     int terminal(int vertex) {
-        if(terminal_values[vertex] != -1) {
+        if(terminal_values[vertex] != Trie::no_edge) {
             return terminal_values[vertex];
         }
-        if(trie->is_terminal(suffix_link(vertex))) {
+        if(trie.is_terminal(suffix_link(vertex))) {
             terminal_values[vertex] = suffix_link(vertex);
         }
         else if(!suffix_link(vertex)) {
@@ -130,12 +125,12 @@ private:
     }
 
     int transit(int vertex, char c) {
-        int key = trie->encode(vertex, c);
+        int key = trie.encode(vertex, c);
         if(transit_table.find(key) != transit_table.end()) {
             return transit_table[key];
         }
-        if(trie->get_edge(vertex, c) != -1) {
-            transit_table[key] = trie->get_edge(vertex, c);
+        if(trie.get_edge(vertex, c) != Trie::no_edge) {
+            transit_table[key] = trie.get_edge(vertex, c);
         }
         else if(!vertex) {
             transit_table[key] = 0;
@@ -153,7 +148,7 @@ private:
         }
         visited[vertex] = true;
         compressor[vertex] = get_result(terminal(vertex));
-        for(auto i : trie->get_terminal_indices(vertex)) {
+        for(auto i : trie.get_terminal_indices(vertex)) {
             compressor[vertex].emplace_back(i);
         }
         return compressor[vertex];
@@ -164,7 +159,7 @@ private:
     vector<int> terminal_values;
     // transit - transitional function
     unordered_map<int, int> transit_table;
-    Trie *trie;
+    Trie &trie;
     // [current] state [of the automate] - number of some vertex
     int state = 0;
     // it compresses the results given by terminal[suffix link] function
@@ -194,8 +189,8 @@ void split_pattern(string &pattern, vector<string> &word_list, vector<int> &indi
 
 int main() {
     // speed-up
-    ios_base::sync_with_stdio(0);
-    cin.tie(0);
+    ios_base::sync_with_stdio(false);
+    cin.tie(nullptr);
 
     string pattern;
     cin >> pattern;
@@ -222,7 +217,7 @@ int main() {
                 continue;
            ++mappy[position];
         }
-        int position_to_check = pos - pattern.length() + 1;
+        int position_to_check = pos - static_cast<int>(pattern.length()) + 1;
         if(position_to_check > -1 && mappy[position_to_check] == word_list.size()) {
             cout << position_to_check << " ";
         }
