@@ -7,8 +7,8 @@ using namespace std;
 class Trie {
 
 public:
-    explicit Trie(const vector<string> &pattern_list) : terminal_index(0), last_index(1), indices(0),
-        parents(0), char_edges(1) {
+    explicit Trie(const vector<string> &pattern_list) : terminal_index(0), last_index(1), indices(1),
+                                                        parents(1), char_edges(1) {
         for(const auto &pattern : pattern_list) {
             add_str(pattern);
         }
@@ -84,8 +84,8 @@ class Automate {
 
 public:
     explicit Automate(Trie &trie1) : trie(trie1) {
-        suffix_values.resize(trie.get_size(), Trie::no_edge);
-        terminal_values.resize(trie.get_size(), Trie::no_edge);
+        suffix_values.resize(trie.get_size(), -1);
+        terminal_values.resize(trie.get_size(), -1);
         compressor.resize(trie.get_size());
         visited.resize(trie.get_size(), false);
         suffix_values[0] = 0;
@@ -215,7 +215,7 @@ int main() {
             int position = pos - indices[i];
             if(position < 0)
                 continue;
-           ++mappy[position];
+            ++mappy[position];
         }
         int position_to_check = pos - static_cast<int>(pattern.length()) + 1;
         if(position_to_check > -1 && mappy[position_to_check] == word_list.size()) {
