@@ -1,9 +1,9 @@
+#ifndef BIGINTEGER_BIGINTEGER_H
+#define BIGINTEGER_BIGINTEGER_H
+
 #include <iostream>
 #include <vector>
 #include <string>
-
-#ifndef BIGINTEGER_BIGINTEGER_H
-#define BIGINTEGER_BIGINTEGER_H
 
 using val_t = unsigned long long;
 class BigInteger {
@@ -12,15 +12,13 @@ public:
 
     BigInteger(BigInteger &&other) noexcept;
 
-    friend void swap(BigInteger &a, BigInteger &b);
-
-    friend void swap(BigInteger &a, BigInteger &&b);
-
-    BigInteger&operator=(BigInteger other);
-
     BigInteger(int other);
 
     BigInteger();
+
+    friend void swap(BigInteger &a, BigInteger &b);
+
+    friend void swap(BigInteger &a, BigInteger &&b);
 
     bool friend operator==(const BigInteger &first, const BigInteger &other);
 
@@ -38,6 +36,12 @@ public:
 
     BigInteger friend operator-(const BigInteger &first, const BigInteger &other);
 
+    BigInteger friend operator*(const BigInteger &first, const BigInteger &other);
+
+    BigInteger friend operator/(const BigInteger &first, const BigInteger &other);
+
+    BigInteger friend operator%(const BigInteger &first, const BigInteger &other);
+
     BigInteger& operator-=(const BigInteger &other);
 
     BigInteger& operator+=(const BigInteger &other);
@@ -48,39 +52,35 @@ public:
 
     BigInteger& operator%=(const BigInteger &other);
 
+    BigInteger&operator=(BigInteger other);
+
     BigInteger& operator++();
 
     BigInteger& operator--();
 
+    const BigInteger operator++(int);
+
+    const BigInteger operator--(int);
+
     BigInteger operator-() const;
 
-    std::string toString() const;
+    BigInteger operator*(val_t number) const;
 
     friend std::ostream&operator<<(std::ostream &os, const BigInteger &other);
 
     friend std::istream&operator>>(std::istream &is, BigInteger &other);
 
-    explicit operator bool() const;
-
-    explicit operator int() const;
-
-    BigInteger friend operator*(const BigInteger &first, const BigInteger &other);
-
-    BigInteger friend operator/(const BigInteger &first, const BigInteger &other);
-
-    BigInteger friend operator%(const BigInteger &first, const BigInteger &other);
-
     BigInteger operator<<(size_t num) const;
 
     BigInteger operator>>(size_t num) const;
 
-    BigInteger operator*(val_t number) const;
+    explicit operator bool() const;
+
+    explicit operator int() const;
+
+    std::string toString() const;
 
     bool IsZero() const;
-
-    const BigInteger operator++(int);
-
-    const BigInteger operator--(int);
 private:
     static void sum(const std::vector<val_t> &a, const std::vector<val_t> &b, std::vector<val_t> &res);
 
@@ -173,10 +173,7 @@ std::string BigInteger::valToString(val_t value) const {
     return res;
 }
 
-BigInteger::BigInteger(const BigInteger &other) {
-    digit = other.digit;
-    sign = other.sign;
-}
+BigInteger::BigInteger(const BigInteger &other) = default;
 
 BigInteger::BigInteger(BigInteger &&other) noexcept {
     swap(*this, other);
@@ -188,9 +185,8 @@ BigInteger& BigInteger::operator=(BigInteger other) {
 }
 
 void swap(BigInteger &a, BigInteger &b) {
-    using std::swap;
-    swap(a.digit, b.digit);
-    swap(a.sign, b.sign);
+    std::swap(a.digit, b.digit);
+    std::swap(a.sign, b.sign);
 }
 
 BigInteger::BigInteger(int other) {
@@ -339,7 +335,7 @@ std::istream&operator>>(std::istream &is, BigInteger &other) {
     }
 
     other.digit.clear();
-    for(int i = static_cast<int>(s.size()); i > 0; i -= BigInteger::power) {
+    for(auto i = static_cast<int>(s.size()); i > 0; i -= BigInteger::power) {
         other.digit.emplace_back(BigInteger::makeDigit(s, static_cast<size_t>(std::max(index, i - BigInteger::power)),
                                                        static_cast<size_t>(i)));
     }
@@ -455,7 +451,7 @@ BigInteger operator/(const BigInteger &first, const BigInteger &other) {
 BigInteger BigInteger::recursiveDelete(BigInteger temp, const BigInteger &other, std::vector<val_t> &digit) {
     digit.clear();
     bool result_sign = temp.sign == other.sign;
-    for(int i = static_cast<int>(temp.digit.size() - other.digit.size()); i > -1; --i) {
+    for(auto i = static_cast<int>(temp.digit.size() - other.digit.size()); i > -1; --i) {
         val_t left = 0;
         val_t right = modder;
         BigInteger bad(other << i);
