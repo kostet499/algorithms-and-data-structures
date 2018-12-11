@@ -83,14 +83,14 @@ public:
         return iterated.size();
     }
 
-    static double Euclidean(const pos &a, const pos &b) {
+    static double euclidean(const pos &a, const pos &b) {
         return sqrt(pow(a.first - b.first, 2) + pow(a.second - b.second, 2));
     }
 
     static bool IsBetween(const pos &a, const pos &b, const pos &c) {
-        double ab = Euclidean(a, b);
-        double ac = Euclidean(a, c);
-        double bc = Euclidean(b, c);
+        double ab = euclidean(a, b);
+        double ac = euclidean(a, c);
+        double bc = euclidean(b, c);
         return ac + bc - ab < 1e-8;
     };
 
