@@ -8,7 +8,7 @@
 using val_t = unsigned long long;
 class BigInteger {
 public:
-    BigInteger(const BigInteger &other);
+    BigInteger(const BigInteger &other) = default;
 
     BigInteger(BigInteger &&other) noexcept;
 
@@ -172,8 +172,6 @@ std::string BigInteger::valToString(val_t value) const {
     }
     return res;
 }
-
-BigInteger::BigInteger(const BigInteger &other) = default;
 
 BigInteger::BigInteger(BigInteger &&other) noexcept {
     swap(*this, other);
