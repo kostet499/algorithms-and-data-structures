@@ -64,8 +64,6 @@ public:
 
     BigInteger operator-() const;
 
-    BigInteger operator*(val_t number) const;
-
     friend std::ostream&operator<<(std::ostream &os, const BigInteger &other);
 
     friend std::istream&operator>>(std::istream &is, BigInteger &other);
@@ -99,7 +97,7 @@ private:
     static unsigned short power;
     static val_t modder;
     std::vector<val_t> digit;
-    mutable bool sign;
+    bool sign;
 };
 
 unsigned short BigInteger::power = 3;
@@ -287,9 +285,8 @@ BigInteger operator+(const BigInteger &first, const BigInteger &other) {
 }
 
 BigInteger operator-(const BigInteger &first, const BigInteger &other) {
-    other.sign = !other.sign;
-    BigInteger biggy(first + other);
-    other.sign = !other.sign;
+    BigInteger temp(-other);
+    BigInteger biggy(first + temp);
     return biggy;
 }
 
@@ -358,9 +355,24 @@ BigInteger::operator bool() const {
 
 BigInteger operator*(const BigInteger &first, const BigInteger &other) {
     BigInteger biggy;
-
-    for(size_t i = 0; i < first.digit.size(); ++i) {
-        biggy = biggy + ((other * first.digit[i]) << i);
+    if(first.digit.size() == 1 && other.digit.size() == 1) {
+        val_t value = first.digit[0] * other.digit[0];
+        biggy.digit[0] = value % BigInteger::modder;
+        biggy.digit.emplace_back(value / BigInteger::modder);
+    }
+    else {
+        size_t n = std::max(first.digit.size(), other.digit.size());
+        size_t u = n >> 1;
+        BigInteger fl(first >> u);
+        BigInteger fr(first - (fl << u));
+        BigInteger sl(other >> u);
+        BigInteger sr(other - (sl << u));
+        fl.sign = true;
+        fr.sign = true;
+        sl.sign = true;
+        sr.sign = true;
+        BigInteger mflsl(fl * sl), mfrsr(fr * sr);
+        biggy = (mflsl << (u << 1)) + (((fl + fr) * (sl + sr) - mflsl - mfrsr) << u) + mfrsr;
     }
 
     biggy.sign = first.sign == other.sign;
@@ -368,29 +380,8 @@ BigInteger operator*(const BigInteger &first, const BigInteger &other) {
     return biggy;
 }
 
-BigInteger BigInteger::operator*(const val_t number) const {
-    BigInteger biggy;
-    val_t leftings = 0;
-    biggy.digit.resize(digit.size());
-    for(size_t i = 0; i < digit.size(); ++i) {
-        val_t value = digit[i] * number + leftings;
-        biggy.digit[i] = value % modder;
-        leftings = value / modder;
-    }
-    if(leftings > 0) {
-        biggy.digit.emplace_back(leftings);
-    }
-    biggy.sign = sign;
-    biggy.delZeros();
-    return biggy;
-}
-
 BigInteger BigInteger::operator<<(size_t num) const {
     BigInteger biggy;
-    if(IsZero()) {
-        return biggy;
-    }
-
     biggy.sign = sign;
     biggy.digit.resize(num + digit.size());
     for(size_t i = 0; i < num; ++i) {
@@ -400,6 +391,7 @@ BigInteger BigInteger::operator<<(size_t num) const {
     for(size_t i = 0; i < digit.size(); ++i) {
         biggy.digit[num + i] = digit[i];
     }
+    biggy.delZeros();
     return biggy;
 }
 
@@ -414,7 +406,7 @@ BigInteger BigInteger::operator>>(size_t num) const {
     for(size_t i = 0; i < biggy.digit.size(); ++i) {
         biggy.digit[i] = digit[i + num];
     }
-
+    biggy.delZeros();
     return biggy;
 }
 
