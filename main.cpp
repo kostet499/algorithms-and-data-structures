@@ -26,6 +26,26 @@ struct point {
     }
 };
 
+struct facet {
+    vector<size_t> face;
+
+    facet(size_t val1, size_t val2, size_t val3) {
+        face = {val1, val2, val3};
+    }
+
+    const size_t operator[](size_t index) const {
+        return face[index];
+    }
+
+    vector<size_t>& operator()() {
+        return face;
+    }
+
+    bool operator<(const facet &other) {
+        return face < other.face;
+    }
+};
+
 class ConvexHull {
 public:
     ConvexHull(const vector<point> &point_set) : super_point(0, 0, 0){
@@ -36,101 +56,77 @@ public:
     }
 
     void represent_answer() {
-        facet.sort();
-        std::cout << facet.size() << std::endl;
-        for(auto &mface : facet) {
-            std::cout << 3 << " " << mface.first[0] << " " << mface.first[1] << " " << mface.first[2] << std::endl;
+        facelist.sort();
+        std::cout << facelist.size() << std::endl;
+        for(const auto &mface : facelist) {
+            std::cout << 3 << " " << mface[0] << " " << mface[1] << " " << mface[2] << std::endl;
         }
     }
 private:
-    void sort_facet(vector<size_t> &mface, const vector<point> &point_set) {
-        std::sort(mface.begin(), mface.end());
+    void sort_facet(facet &mface, const vector<point> &point_set) {
+        std::sort(mface().begin(), mface().end());
         point ab = point_set[mface[1]] - point_set[mface[0]];
         point ac = point_set[mface[2]] - point_set[mface[0]];
         if(outside_normal(mface, point_set)(ab[ac]) < 0) {
-            std::swap(mface[1], mface[2]);
+            std::swap(mface()[1], mface()[2]);
         }
     }
 
-    bool is_seen(vector<size_t> &mface, size_t point_id, const vector<point> &point_set) const {
+    bool is_seen(const facet &mface, size_t point_id, const vector<point> &point_set) const {
         return (point_set[point_id] - point_set[mface[0]])(outside_normal(mface, point_set)) > 0;
     }
 
-    point outside_normal(vector<size_t> &mface, const vector<point> &point_set) const {
+    point outside_normal(const facet &mface, const vector<point> &point_set) const {
         point ab = point_set[mface[1]] - point_set[mface[0]];
         point ac = point_set[mface[2]] - point_set[mface[0]];
         return (super_point - point_set[mface[0]])(ab[ac]) > 0 ? ac[ab] : ab[ac];
     }
 
     void add_point(const vector<point> &point_set) {
-        std::unordered_map<size_t, bool> facet_seen;
-        for(auto mface = facet.begin(); mface != facet.end(); ++mface) {
-            facet_seen[mface->second] = is_seen(mface->first, point_index, point_set);
-            if(facet_seen[mface->second]) {
-                mface = facet.erase(mface);
-                --mface;
+        std::unordered_map<size_t, bool> edges;
+        for(auto iter = facelist.begin(); iter != facelist.end(); ++iter) {
+            if(is_seen(*iter, point_index, point_set)) {
+                for(size_t i = 0; i < 3; ++i) {
+                    size_t cypher = encode((*iter)[i], (*iter)[(i + 1) % 3]);
+                    if(edges.find(cypher) == edges.end()) {
+                        edges[cypher] = true;
+                    }
+                    else {
+                        edges.erase(cypher);
+                    }
+                }
+                iter = facelist.erase(iter);
+                --iter;
             }
         }
 
-        std::unordered_map<size_t, size_t> temp;
-        std::list<vector<size_t> > new_edges;
-        for(auto medge = edges.begin(); medge != edges.end(); ++medge) {
-            size_t facet_id1 = (*medge)[2];
-            size_t facet_id2 = (*medge)[3];
-            if(facet_seen[facet_id1] && facet_seen[facet_id2]) {
-                medge = edges.erase(medge);
-                --medge;
-            }
-            else if(facet_seen[facet_id1] || facet_seen[facet_id2]) {
-                size_t new_facet_id = hardcode_facet((*medge)[0], (*medge)[1], point_index, point_set);
-                (*medge)[2] = new_facet_id;
-                (*medge)[3] = facet_seen[facet_id2] ? facet_id1 : facet_id2;
-                for(size_t j = 0; j < 2; ++j) {
-                    if (temp.find(encode(point_index, (*medge)[j])) != temp.end()) {
-                        edges.emplace_front(vector<size_t>(
-                                {point_index, (*medge)[j], temp[encode(point_index, (*medge)[j])], new_facet_id}));
-                    } else {
-                        temp[encode(point_index, (*medge)[j])] = new_facet_id;
-                    }
-                }
-            }
+        for(auto iter : edges) {
+            size_t val1 = iter.first >> 15;
+            size_t val2 = iter.first - (val1 << 15);
+            facelist.emplace_back(val1, val2, point_index);
+            sort_facet(facelist.back(), point_set);
         }
+    }
+
+    size_t encode(size_t val1, size_t val2) const {
+        if(val1 > val2) {
+            std::swap(val1, val2);
+        }
+        return (val1 << 15) + val2;
     }
 
     void first_initialization(const vector<point> &point_set) {
         super_point = (point_set[0] + point_set[1] + point_set[2] + point_set[3]) * 0.25;
-
-        hardcode_facet(0, 1, 2, point_set); // facet 0
-        hardcode_facet(3, 0, 1, point_set); // facet 1
-        hardcode_facet(2, 3, 0, point_set); // facet 2
-        hardcode_facet(1, 2, 3, point_set); // facet 3
-
-        edges.emplace_back(vector<size_t>({0, 1, 0, 1}));
-        edges.emplace_back(vector<size_t>({3, 0, 1, 2}));
-        edges.emplace_back(vector<size_t>({2, 3, 2, 3}));
-        edges.emplace_back(vector<size_t>({1, 2, 3, 0}));
-        edges.emplace_back(vector<size_t>({0, 2, 0, 2}));
-        edges.emplace_back(vector<size_t>({3, 1, 3, 1}));
-    }
-
-    size_t hardcode_facet(size_t id1, size_t id2, size_t id3, const vector<point> &point_set) {
-        facet.emplace_back(std::make_pair(vector<size_t>({id1, id2, id3}), facet_index));
-        sort_facet(facet.back().first, point_set);
-        return facet_index++;
-    }
-
-    size_t encode(size_t a, size_t b) const {
-        if(a > b) {
-            std::swap(a, b);
+        for(size_t i = 0; i < 4; ++i) {
+            facelist.emplace_back(i, (i + 1) % 4, (i + 2) % 4);
+            sort_facet(facelist.back(), point_set);
         }
-        return (a << 15) + b;
     }
 
 private:
-    std::list<std::pair<vector<size_t>, size_t> > facet;
-    std::list<vector<size_t> > edges;
+    std::list<facet> facelist;
     point super_point;
-    size_t point_index = 0, facet_index = 0;
+    size_t point_index = 0;
 };
 
 int main() {
