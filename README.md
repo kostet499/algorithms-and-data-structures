@@ -1,1 +1,2 @@
-Tis' my code here.
+The code for different algorithms is located at corresponding branches.
+I was not so experienced with git system while was passing this university course, so I made it very hard to merge into master :) 
